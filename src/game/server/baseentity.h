@@ -1185,7 +1185,7 @@ public:
 	// FIXME: Figure out what to do about this
 	virtual void	GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity = NULL);
 
-	float			GetGravity( void ) const;
+	virtual float	GetGravity( void ) const;
 	void			SetGravity( float gravity );
 	virtual float	GetFriction( void ) const;
 	void			SetFriction( float flFriction );

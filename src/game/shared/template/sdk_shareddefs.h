@@ -4,11 +4,7 @@
 //
 //=============================================================================//
 
-#ifndef SDK_SHAREDDEFS_H
-#define SDK_SHAREDDEFS_H
-#ifdef _WIN32
 #pragma once
-#endif
 
 #ifdef SWARM_DLL
 // Quick swap! NUM_AI_CLASSES = LAST_SHARED_ENTITY_CLASS in ASW!
@@ -22,7 +18,7 @@
 //========================
 
 // For GetGameDescription(). Mostly for MP.
-#define GAMENAME "Template"
+#define GAMENAME "ARE YOU READY FOR VALVE INDEX???"
 
 //========================
 // PLAYER RELATED OPTIONS
@@ -38,6 +34,13 @@
 // #define PLAYER_DISABLE_THROWING
 //------------------
 
+enum
+{
+	OF_HANDLING_TWO_HANDED = 0,
+	OF_HANDLING_SINGLE,
+	OF_HANDLING_AKIMBO
+};
+
 //========================
 // GAME UI
 //========================
@@ -51,7 +54,5 @@
 // WORLD
 //========================
 //#define WORLD_USE_HL2_GRAVITY : Use gravity settings much like HL2 or Portal.
-#define WORLD_USE_HL2_GRAVITY
+//#define WORLD_USE_HL2_GRAVITY
 //------------------
-
-#endif // SDK_SHAREDDEFS_H

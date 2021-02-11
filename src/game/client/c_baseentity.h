@@ -1125,7 +1125,7 @@ public:
 	void				SetFriction( float flFriction );
 
 	void				SetGravity( float flGravity );
-	float				GetGravity( void ) const;
+	virtual float		GetGravity( void ) const;
 
 	// Sets the model from a model index 
 	void				SetModelByIndex( int nModelIndex );

@@ -136,6 +136,7 @@ kbutton_t	in_moveright;
 kbutton_t	in_graph;  
 kbutton_t	in_joyspeed;		// auto-speed key from the joystick (only works for player movement, not vehicles)
 kbutton_t	in_ducktoggle;
+kbutton_t	in_sprinttoggle;
 kbutton_t	in_lookspin;
 
 kbutton_t	in_attack;
@@ -481,6 +482,14 @@ void IN_ClearDuckToggle()
 		KeyUp( &in_ducktoggle, NULL ); 
 	}
 }
+
+void IN_ClearSprintToggle()
+{
+	if ( ::input->KeyState( &in_sprinttoggle ) )
+	{
+		KeyUp( &in_sprinttoggle, NULL ); 
+	}
+}
 void IN_ForceSpeedDown( ) {KeyDown(&in_speed, NULL );}
 void IN_ForceSpeedUp( ) {KeyUp(&in_speed, NULL );}
 void IN_CommanderMouseMoveDown( const CCommand &args ) {KeyDown(&in_commandermousemove, args[1] );}
@@ -519,8 +528,6 @@ void IN_MoverightDown( const CCommand &args ) {KeyDown(&in_moveright, args[1] );
 void IN_MoverightUp( const CCommand &args ) {KeyUp(&in_moveright, args[1] );}
 void IN_WalkDown( const CCommand &args ) {KeyDown(&in_walk, args[1] );}
 void IN_WalkUp( const CCommand &args ) {KeyUp(&in_walk, args[1] );}
-void IN_SpeedDown( const CCommand &args ) {KeyDown(&in_speed, args[1] );}
-void IN_SpeedUp( const CCommand &args ) {KeyUp(&in_speed, args[1] );}
 void IN_StrafeDown( const CCommand &args ) {KeyDown(&in_strafe, args[1] );}
 void IN_StrafeUp( const CCommand &args ) {KeyUp(&in_strafe, args[1] );}
 void IN_Attack2Down( const CCommand &args ) { KeyDown(&in_attack2, args[1] );}
@@ -546,17 +553,29 @@ void IN_DuckToggle( const CCommand &args )
 	}
 }
 
+void IN_SprintToggle( const CCommand &args ) 
+{ 
+	if ( ::input->KeyState(&in_sprinttoggle) )
+	{
+		IN_ClearSprintToggle();
+	}
+	else
+	{
+		KeyDown( &in_sprinttoggle, args[1] ); 
+	}
+}
+
 void IN_DuckDown( const CCommand &args ) 
 {
-#if defined ( _X360 )
-	SplitScreenConVarRef option_duck_method( "option_duck_method" );
+	ConVarRef option_duck_method( "option_duck_method" );
 
-	if ( option_duck_method.IsValid() && option_duck_method.GetBool( GET_ACTIVE_SPLITSCREEN_SLOT() ) )
+	IN_ClearSprintToggle();
+
+	if ( option_duck_method.GetBool() )
 	{
 		IN_DuckToggle( args );
 	}
 	else
-#endif
 	{
 		KeyDown(&in_duck, args[1] );
 		IN_ClearDuckToggle();
@@ -564,18 +583,46 @@ void IN_DuckDown( const CCommand &args )
 }
 void IN_DuckUp( const CCommand &args ) 
 {
-#if defined ( _X360 )
-	SplitScreenConVarRef option_duck_method( "option_duck_method" );
+	ConVarRef option_duck_method( "option_duck_method" );
 
-	if ( option_duck_method.IsValid() && option_duck_method.GetBool( GET_ACTIVE_SPLITSCREEN_SLOT() ) )
+	if ( option_duck_method.GetBool() )
 	{
 		// intentionally blank
 	}
 	else
-#endif
 	{
 		KeyUp(&in_duck, args[1] );
 		IN_ClearDuckToggle();
+	}
+}
+
+void IN_SpeedDown( const CCommand &args )
+{
+	ConVarRef option_sprint_method( "option_sprint_method" );
+
+	if ( option_sprint_method.GetBool() )
+	{
+		IN_SprintToggle( args );
+	}
+	else
+	{
+		KeyDown(&in_speed, args[1] );
+		IN_ClearSprintToggle();
+	}
+}
+
+void IN_SpeedUp( const CCommand &args )
+{
+	ConVarRef option_sprint_method( "option_sprint_method" );
+
+	if ( option_sprint_method.GetBool() )
+	{
+		// intentionally blank
+	}
+	else
+	{
+		KeyUp(&in_speed, args[1] );
+		IN_ClearSprintToggle();
 	}
 }
 
@@ -1628,6 +1675,11 @@ int CInput::GetButtonBits( bool bResetState )
 	if ( KeyState(&in_ducktoggle) )
 	{
 		bits |= IN_DUCK;
+	}
+	
+	if ( KeyState(&in_sprinttoggle) )
+	{
+		bits |= IN_SPEED;
 	}
 
 	if ( in_cancel[ nSlot ] )

@@ -6,7 +6,6 @@
 //====================================================================================
 
 #include "cbase.h"
-#include "sdk_player.h"
 #include "effect_dispatch_data.h"
 #include "te_effect_dispatch.h" 
 #include "predicted_viewmodel.h"
@@ -30,12 +29,21 @@
 #include "sceneentity.h"
 #include "hintmessage.h"
 #include "items.h"
+#include "viewport_panel_names.h"
+#include "of_shared_schemas.h"
+#include "of_class_parse.h"
+#include "sdk_gamerules_sp.h"
+#include "sdk_player_shared.h"
+
+#include "bots\bot.h"
 
 // Our Player walk speed value.
 ConVar player_walkspeed( "player_walkspeed", "190" );
 
 // Show annotations?
 ConVar hud_show_annotations( "hud_show_annotations", "1" );
+
+extern ConVar sv_motd_unload_on_dismissal;
 
 // The delay from when we last got hurt to generate.
 // This is already defined in ASW
@@ -46,11 +54,14 @@ ConVar sv_regeneration_wait_time ("sv_regeneration_wait_time", "1.0", FCVAR_REPL
 #endif
 
 // Link us!
+// Please dont... :(
 LINK_ENTITY_TO_CLASS( player, CSDKPlayer );
 
 IMPLEMENT_SERVERCLASS_ST (CSDKPlayer, DT_SDKPlayer) 
 	SendPropBool( SENDINFO(m_bPlayerPickedUpObject) ),
 	SendPropInt( SENDINFO( m_iShotsFired ), 8, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_iClassNumber ) ),
+	SendPropDataTable( SENDINFO_DT( m_PlayerShared ), &REFERENCE_SEND_TABLE( DT_SDKPlayerShared ) ),
 END_SEND_TABLE()
 
 BEGIN_DATADESC( CSDKPlayer )
@@ -87,6 +98,9 @@ CSDKPlayer::CSDKPlayer()
 	
 	// We did not fire any shots.
 	m_iShotsFired = 0;
+	m_iClassNumber = 0;
+	
+	m_PlayerShared.m_pOuter = this;
 }
 
 CSDKPlayer::~CSDKPlayer()
@@ -106,19 +120,64 @@ void CSDKPlayer::Precache( void )
 	PrecacheScriptSound( SOUND_HINT );
 	PrecacheScriptSound( SOUND_USE );
 	PrecacheScriptSound( SOUND_USE_DENY );
+}
 
-	// Last, precache the player model or else the game will crash when the player dies.
-	PrecacheModel ( "models/player.mdl" );
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CSDKPlayer::InitialSpawn( void )
+{
+	BaseClass::InitialSpawn();
+
+	const ConVar *hostname = cvar->FindVar( "hostname" );
+	const char *title = (hostname) ? hostname->GetString() : "MESSAGE OF THE DAY";
+
+	// open info panel on client showing MOTD:
+	KeyValues *data = new KeyValues("data");
+	data->SetString( "title", title );		// info panel title
+	data->SetString( "type", "1" );			// show userdata from stringtable entry
+	data->SetString( "msg",	"motd" );		// use this stringtable entry
+	data->SetInt( "cmd", TEXTWINDOW_CMD_IMPULSE101 );// exec this command if panel closed
+	data->SetBool( "unload", sv_motd_unload_on_dismissal.GetBool() );
+
+	ShowViewPortPanel( PANEL_INFO, true, data );
+
+	data->deleteThis();
+
+	m_bWelcome = true;
 }
 
 void CSDKPlayer::Spawn()
 {
-	// Dying without a player model crashes the client
-	SetModel("models/player.mdl");
-	SetMaxSpeed( PLAYER_WALK_SPEED );
-	BaseClass::Spawn();
-	StartWalking();	
+	// Dying without a player model crashes the client so set it instantly
+	SetModel( GetClass(this).szPlayerModel );
 
+	BaseClass::Spawn();
+
+	// Set speed
+	SetMaxSpeed( GetClass(this).flSpeed );
+
+	if( m_bWelcome )
+	{
+		m_bWelcome = false;
+	}
+
+	//////////////////////////////////
+	// Set stuff after this comment
+	//////////////////////////////////
+
+	// Set health
+	m_iMaxHealth = GetClass(this).iMaxHealth;
+	m_iHealth = m_iMaxHealth;
+
+	SetMoveType( MOVETYPE_WALK );
+	RemoveEffects( EF_NODRAW | EF_NOSHADOW );
+	RemoveSolidFlags( FSOLID_NOT_SOLID );
+	m_Local.m_iHideHUD = 0;
+	
+	IPhysicsObject *pObj = VPhysicsGetObject();
+	if ( pObj )
+		pObj->Wake();
 
 #ifdef PLAYER_MOUSEOVER_HINTS
 	m_iDisplayHistoryBits &= ~DHM_ROUND_CLEAR;
@@ -132,6 +191,11 @@ void CSDKPlayer::Spawn()
 
 	GetPlayerProxy();
 
+	// Setup bot stuff
+	if ( GetBotController() ) 
+	{
+		GetBotController()->Spawn();
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -428,13 +492,11 @@ bool CSDKPlayer::BumpWeapon( CBaseCombatWeapon *pWeapon )
 //-----------------------
 void CSDKPlayer::StartWalking( void )
 {
-	SetMaxSpeed( PLAYER_WALK_SPEED );
 	m_fIsWalking = true;
 }
 
 void CSDKPlayer::StopWalking( void )
 {
-	SetMaxSpeed( PLAYER_WALK_SPEED );
 	m_fIsWalking = false;
 }
 
@@ -719,18 +781,15 @@ int	CSDKPlayer::OnTakeDamage( const CTakeDamageInfo &info )
 		inputInfoCopy.ScaleDamage( 5.0f );
 		inputInfoCopy.ScaleDamageForce( 0.05f );
 	}
-
-	int ret = BaseClass::OnTakeDamage( inputInfoCopy );
-	m_DmgOrigin = info.GetDamagePosition();
-
-#ifdef PLAYER_IGNORE_FALLDAMAGE
+	
 	// ignore fall damage if instructed to do so by input
 	if ( ( info.GetDamageType() & DMG_FALL ) )
 	{
 		inputInfoCopy.SetDamage(0.0f);
-		return 0;
 	}
-#endif
+
+	int ret = BaseClass::OnTakeDamage( inputInfoCopy );
+	m_DmgOrigin = info.GetDamagePosition();
 
 #ifdef PLAYER_HEALTH_REGEN
 	if ( GetHealth() < 100 )
@@ -738,6 +797,12 @@ int	CSDKPlayer::OnTakeDamage( const CTakeDamageInfo &info )
 		m_fTimeLastHurt = gpGlobals->curtime;
 	}
 #endif
+
+	// Bot on take damage Event
+	if ( GetBotController() ) 
+	{
+		GetBotController()->OnTakeDamage( inputInfoCopy );
+	}
 
 	return ret;
 }
@@ -836,6 +901,12 @@ void CSDKPlayer::Event_Killed( const CTakeDamageInfo &info )
 	BaseClass::Event_Killed( info );
 
 	FirePlayerProxyOutput( "PlayerDied", variant_t(), this, this );
+	
+	// Bot on death event
+	if ( GetBotController() ) 
+	{
+		GetBotController()->OnDeath( info );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -866,13 +937,50 @@ void CSDKPlayer::CheatImpulseCommands( int iImpulse )
 
 void CSDKPlayer::GiveAllItems( void )
 {
-	// Impluse 101
+	EquipSuit();
+
+	// Give the player everything!
+	GiveAmmo(255, "Pistol");
+	GiveAmmo(255, "AR2");
+	GiveAmmo(5, "AR2AltFire");
+	GiveAmmo(255, "SMG1");
+	GiveAmmo(255, "Buckshot");
+	GiveAmmo(3, "smg1_grenade");
+	GiveAmmo(3, "rpg_round");
+	GiveAmmo(5, "grenade");
+	GiveAmmo(32, "357");
+	GiveAmmo(16, "XBowBolt");
+
+#ifdef HL2_EPISODIC
+	GiveAmmo(5, "Hopwire");
+#endif
+
+	GiveNamedItem("weapon_smg1");
+	GiveNamedItem("weapon_frag");
+	GiveNamedItem("weapon_crowbar");
+	GiveNamedItem("weapon_pistol");
+	GiveNamedItem("weapon_ar2");
+	GiveNamedItem("weapon_shotgun");
+	GiveNamedItem("weapon_physcannon");
+
+	GiveNamedItem("weapon_bugbait");
+
+	GiveNamedItem("weapon_rpg");
+	GiveNamedItem("weapon_357");
+	GiveNamedItem("weapon_crossbow");
 }
 
 void CSDKPlayer::GiveDefaultItems( void )
 {
 	// If you want the player to always start with something, give it
 	// to them here.
+
+	int iWeaponCount = GetClass(this).iWeaponCount;
+
+	for( int i = 0; i < iWeaponCount; i++ )
+	{
+		GiveNamedItem( GetClass(this).m_hWeaponNames[i] );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -914,6 +1022,22 @@ void CSDKPlayer::UpdateMouseoverHints()
 }
 #endif
 
+void CSDKPlayer::OnGroundChanged(CBaseEntity *oldGround, CBaseEntity *newGround)
+{
+	BaseClass::OnGroundChanged(oldGround, newGround);
+	
+	if( oldGround && !newGround )
+	{
+		DevWarning("Left the ground\n");
+		m_PlayerShared.m_flLastGrounded = gpGlobals->curtime;
+	}
+	else
+		m_PlayerShared.m_iJumpCount = GetClass(this).iJumpCount;
+
+	m_PlayerShared.SetGrappledWall(NULL);
+	m_PlayerShared.m_flGrappleTime = -1;
+}
+
 CLogicPlayerProxy *CSDKPlayer::GetPlayerProxy( void )
 {
 	CLogicPlayerProxy *pProxy = dynamic_cast< CLogicPlayerProxy* > ( m_hPlayerProxy.Get() );
@@ -930,4 +1054,237 @@ CLogicPlayerProxy *CSDKPlayer::GetPlayerProxy( void )
 	}
 
 	return pProxy;
+}
+
+bool CSDKPlayer::ClientCommand(const CCommand &args)
+{
+	const char *cmd = args[0];
+
+	if( FStrEq( cmd, "joinclass" ) )
+	{
+		int iDesiredClass = GetClassIndexByName( args[1] );
+
+		if( iDesiredClass == -1 )
+			iDesiredClass = atoi(args[1]);
+
+		if( iDesiredClass >= GetClassManager()->m_iClassCount || iDesiredClass == m_iClassNumber )
+			return false;
+
+		m_iClassNumber = iDesiredClass;
+
+		CommitSuicide();
+
+		return true;
+	}
+	else if( FStrEq( cmd, "get_class_info" ) )
+	{
+		DevMsg( "%s\n", GetClass(this).szClassName );
+		return true;
+	}
+	else
+		return false;
+		//return ClientCommand( args );
+}
+
+void CSDKPlayer::UpdateSpeed()
+{
+	float flSpeed = GetClass(this).flSpeed;
+
+	flSpeed *= m_PlayerShared.GetSpeedMultiplier();
+
+	SetMaxSpeed( flSpeed );
+}
+
+//================================================================================
+//================================================================================
+void CSDKPlayer::SetBotController( IBot * pBot )
+{
+    if ( m_pBotController ) {
+        delete m_pBotController;
+        m_pBotController = NULL;
+    }
+
+    m_pBotController = pBot;
+}
+
+//================================================================================
+//================================================================================
+void CSDKPlayer::SetUpBot()
+{
+    CreateSenses();
+    SetBotController( new CBot( this ) );
+}
+
+//================================================================================
+//================================================================================
+void CSDKPlayer::CreateSenses()
+{
+    m_pSenses = new CAI_Senses;
+    m_pSenses->SetOuter( this );
+}
+
+//================================================================================
+//================================================================================
+void CSDKPlayer::SetDistLook( float flDistLook )
+{
+    if ( GetSenses() ) {
+        GetSenses()->SetDistLook( flDistLook );
+    }
+}
+
+//================================================================================
+//================================================================================
+int CSDKPlayer::GetSoundInterests()
+{
+    return SOUND_DANGER | SOUND_COMBAT | SOUND_PLAYER | SOUND_CARCASS | SOUND_MEAT | SOUND_GARBAGE;
+}
+
+//================================================================================
+//================================================================================
+int CSDKPlayer::GetSoundPriority( CSound *pSound )
+{
+    if ( pSound->IsSoundType( SOUND_COMBAT ) )
+	{
+        return SOUND_PRIORITY_HIGH;
+    }
+
+    if ( pSound->IsSoundType( SOUND_DANGER ) )
+	{
+        if ( pSound->IsSoundType( SOUND_CONTEXT_FROM_SNIPER | SOUND_CONTEXT_EXPLOSION ) )
+		{
+            return SOUND_PRIORITY_HIGHEST;
+        }
+        else if ( pSound->IsSoundType( SOUND_CONTEXT_GUNFIRE | SOUND_BULLET_IMPACT ) )
+		{
+            return SOUND_PRIORITY_VERY_HIGH;
+        }
+
+        return SOUND_PRIORITY_HIGH;
+    }
+
+    if ( pSound->IsSoundType( SOUND_CARCASS | SOUND_MEAT | SOUND_GARBAGE ) )
+	{
+        return SOUND_PRIORITY_VERY_LOW;
+    }
+
+    return SOUND_PRIORITY_NORMAL;
+}
+
+//================================================================================
+//================================================================================
+bool CSDKPlayer::QueryHearSound( CSound *pSound )
+{
+    CBaseEntity *pOwner = pSound->m_hOwner.Get();
+
+    if ( pOwner == this )
+        return false;
+
+    if ( pSound->IsSoundType( SOUND_PLAYER ) && !pOwner )
+	{
+        return false;
+    }
+
+    if ( pSound->IsSoundType( SOUND_CONTEXT_ALLIES_ONLY ) ) 
+	{
+        if ( Classify() != CLASS_PLAYER_ALLY && Classify() != CLASS_PLAYER_ALLY_VITAL ) 
+		{
+            return false;
+        }
+    }
+
+    if ( pOwner ) 
+	{
+        // Solo escuchemos sonidos provocados por nuestros aliados si son de combate.
+        if ( TheGameRules->PlayerRelationship( this, pOwner ) == GR_ALLY ) {
+            if ( pSound->IsSoundType( SOUND_COMBAT ) && !pSound->IsSoundType( SOUND_CONTEXT_GUNFIRE ) ) {
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    if ( ShouldIgnoreSound( pSound ) )
+	{
+        return false;
+    }
+
+    return true;
+}
+
+//================================================================================
+//================================================================================
+bool CSDKPlayer::QuerySeeEntity( CBaseEntity *pEntity, bool bOnlyHateOrFear )
+{
+    if ( bOnlyHateOrFear )
+	{
+        if ( OFGameRules()->PlayerRelationship( this, pEntity ) == GR_NOTTEAMMATE )
+            return true;
+
+        Disposition_t disposition = IRelationType( pEntity );
+        return (disposition == D_HT || disposition == D_FR);
+    }
+
+    return true;
+}
+
+//================================================================================
+//================================================================================
+void CSDKPlayer::OnLooked( int iDistance )
+{
+    if ( GetBotController() )
+	{
+        GetBotController()->OnLooked( iDistance );
+    }
+}
+
+//================================================================================
+//================================================================================
+void CSDKPlayer::OnListened()
+{
+    if ( GetBotController() ) 
+	{
+        GetBotController()->OnListened();
+    }
+}
+
+//================================================================================
+//================================================================================
+CSound *CSDKPlayer::GetLoudestSoundOfType( int iType )
+{
+    return CSoundEnt::GetLoudestSoundOfType( iType, EarPosition() );
+}
+
+//================================================================================
+// Devuelve si podemos ver el origen del sonido
+//================================================================================
+bool CSDKPlayer::SoundIsVisible( CSound *pSound )
+{
+    return (FVisible( pSound->GetSoundReactOrigin() ) && IsInFieldOfView( pSound->GetSoundReactOrigin() ));
+}
+
+//================================================================================
+//================================================================================
+CSound* CSDKPlayer::GetBestSound( int validTypes )
+{
+    CSound *pResult = GetSenses()->GetClosestSound( false, validTypes );
+
+    if ( pResult == NULL ) {
+        DevMsg( "NULL Return from GetBestSound\n" );
+    }
+
+    return pResult;
+}
+
+//================================================================================
+//================================================================================
+CSound* CSDKPlayer::GetBestScent()
+{
+    CSound *pResult = GetSenses()->GetClosestSound( true );
+
+    if ( pResult == NULL ) {
+        DevMsg( "NULL Return from GetBestScent\n" );
+    }
+
+    return pResult;
 }

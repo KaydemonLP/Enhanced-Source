@@ -39,8 +39,6 @@ extern IFileSystem *filesystem;
 	static ConVar dispcoll_drawplane( "dispcoll_drawplane", "0" );
 #endif
 
-
-
 // tickcount currently isn't set during prediction, although gpGlobals->curtime and
 // gpGlobals->frametime are. We should probably set tickcount (to player->m_nTickBase),
 // but we're REALLY close to shipping, so we can change that later and people can use
@@ -58,10 +56,13 @@ ConVar player_limit_jump_speed( "player_limit_jump_speed", "1", FCVAR_REPLICATED
 // option_duck_method is a carrier convar. Its sole purpose is to serve an easy-to-flip
 // convar which is ONLY set by the X360 controller menu to tell us which way to bind the
 // duck controls. Its value is meaningless anytime we don't have the options window open.
-ConVar option_duck_method("option_duck_method", "1", FCVAR_REPLICATED|FCVAR_ARCHIVE );// 0 = HOLD to duck, 1 = Duck is a toggle
+ConVar option_duck_method("option_duck_method", "0", FCVAR_REPLICATED|FCVAR_ARCHIVE );// 0 = HOLD to duck, 1 = Duck is a toggle
+ConVar option_sprint_method("option_sprint_method", "1", FCVAR_REPLICATED|FCVAR_ARCHIVE );// 0 = HOLD to duck, 1 = Duck is a toggle
+
+ConVar sv_jumpheight("sv_jumpheight", "40", FCVAR_REPLICATED);
 
 // [MD] I'll remove this eventually. For now, I want the ability to A/B the optimizations.
-bool g_bMovementOptimizations = true;
+bool g_bMovementOptimizations = false;
 
 // Roughly how often we want to update the info about the ground surface we're on.
 // We don't need to do this very often.
@@ -1313,7 +1314,7 @@ void CGameMovement::ProcessMovement( CBasePlayer *pPlayer, CMoveData *pMove )
 	player = pPlayer;
 
 	mv = pMove;
-	mv->m_flMaxSpeed = sv_maxspeed.GetFloat();
+	mv->m_flMaxSpeed = pPlayer->GetPlayerMaxSpeed();
 	m_bProcessingMovement = true;
 	m_bInStuckTest = false;
 
@@ -1513,7 +1514,7 @@ void CGameMovement::CheckWaterJump( void )
 			VectorCopy( vecEnd, vecStart );
 			vecEnd.z -= 1024.0f;
 			TracePlayerBBox( vecStart, vecEnd, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, tr );
-			if ( ( tr.fraction < 1.0f ) && ( tr.plane.normal.z >= 0.7 ) )
+			if ( ( tr.fraction < 1.0f ) && ( tr.plane.normal.z >= GAMEMOVEMENT_MAX_SLOPE_ANGLE ) )
 			{
 				mv->m_vecVelocity[2] = 256.0f;			// Push up
 				mv->m_nOldButtons |= IN_JUMP;		// Don't jump again until released
@@ -1755,7 +1756,7 @@ void CGameMovement::StepMove( Vector &vecDestination, trace_t &trace )
 	TracePlayerBBox( mv->GetAbsOrigin(), vecEndPos, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace );
 	
 	// If we are not on the ground any more then use the original movement attempt.
-	if ( trace.plane.normal[2] < 0.7 )
+	if ( trace.plane.normal[2] < GAMEMOVEMENT_MAX_SLOPE_ANGLE )
 	{
 		mv->SetAbsOrigin( vecDownPos );
 		VectorCopy( vecDownVel, mv->m_vecVelocity );
@@ -2067,7 +2068,7 @@ void CGameMovement::StayOnGround( void )
 	if ( trace.fraction > 0.0f &&			// must go somewhere
 		trace.fraction < 1.0f &&			// must hit something
 		!trace.startsolid &&				// can't be embedded in a solid
-		trace.plane.normal[2] >= 0.7 )		// can't hit a steep slope that we can't stand on anyway
+		trace.plane.normal[2] >= GAMEMOVEMENT_MAX_SLOPE_ANGLE )		// can't hit a steep slope that we can't stand on anyway
 	{
 		float flDelta = fabs(mv->GetAbsOrigin().z - trace.endpos.z);
 
@@ -2079,12 +2080,56 @@ void CGameMovement::StayOnGround( void )
 	}
 }
 
+#ifdef OFFSHORE_DLL
+Vector CGameMovement::GetWishVelocity( Vector &forward, Vector &right )
+{
+	Vector wishvel;
+
+	// Copy movement amounts
+	float fmove = mv->m_flForwardMove;
+	float smove = mv->m_flSideMove;
+
+	// Zero out z components of movement vectors
+	if ( g_bMovementOptimizations )
+	{
+		if ( forward[2] != 0 )
+		{
+			forward[2] = 0;
+			VectorNormalize( forward );
+		}
+
+		if ( right[2] != 0 )
+		{
+			right[2] = 0;
+			VectorNormalize( right );
+		}
+	}
+	else
+	{
+		forward[2] = 0;
+		right[2]   = 0;
+		
+		VectorNormalize (forward);  // Normalize remainder of vectors.
+		VectorNormalize (right);    // 
+	}
+
+	for( int i=0 ; i<2 ; i++ )       // Determine x and y parts of velocity
+		wishvel[i] = forward[i]*fmove + right[i]*smove;
+	
+	wishvel[2] = 0;             // Zero out z part of velocity
+
+	return wishvel;
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CGameMovement::WalkMove( void )
 {
+#ifndef OFFSHORE_DLL
 	int i;
+#endif
 
 	Vector wishvel;
 	float spd;
@@ -2100,11 +2145,14 @@ void CGameMovement::WalkMove( void )
 
 	CHandle< CBaseEntity > oldground;
 	oldground = player->GetGroundEntity();
-	
+
 	// Copy movement amounts
 	fmove = mv->m_flForwardMove;
 	smove = mv->m_flSideMove;
 
+#ifdef OFFSHORE_DLL
+	wishvel = GetWishVelocity(forward,right);
+#else
 	// Zero out z components of movement vectors
 	if ( g_bMovementOptimizations )
 	{
@@ -2133,6 +2181,7 @@ void CGameMovement::WalkMove( void )
 		wishvel[i] = forward[i]*fmove + right[i]*smove;
 	
 	wishvel[2] = 0;             // Zero out z part of velocity
+#endif
 
 	VectorCopy (wishvel, wishdir);   // Determine maginitude of speed of move
 	wishspeed = VectorNormalize(wishdir);
@@ -2636,7 +2685,6 @@ bool CGameMovement::CheckJumpButton( void )
 		Assert( sv_gravity.GetFloat() == 800.0f );
 		flMul = 268.3281572999747f;
 #endif
-
 	}
 	else
 	{
@@ -2884,7 +2932,7 @@ int CGameMovement::TryPlayerMove( Vector *pFirstDest, trace_t *pFirstTrace )
 
 		// If the plane we hit has a high z component in the normal, then
 		//  it's probably a floor
-		if (pm.plane.normal[2] > 0.7)
+		if (pm.plane.normal[2] > GAMEMOVEMENT_MAX_SLOPE_ANGLE)
 		{
 			blocked |= 1;		// floor
 		}
@@ -2926,7 +2974,7 @@ int CGameMovement::TryPlayerMove( Vector *pFirstDest, trace_t *pFirstTrace )
 		{
 			for ( i = 0; i < numplanes; i++ )
 			{
-				if ( planes[i][2] > 0.7  )
+				if ( planes[i][2] > GAMEMOVEMENT_MAX_SLOPE_ANGLE  )
 				{
 					// floor or slope
 					ClipVelocity( original_velocity, planes[i], new_velocity, 1 );
@@ -3926,7 +3974,11 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	maxs.Init( MIN( 0, maxsSrc.x ), maxsSrc.y, maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
-	if ( pm.m_pEnt && pm.plane.normal[2] >= 0.7)
+#ifdef OFFSHORE_DLL
+	if ( pm.m_pEnt && pm.plane.normal[2] >= minGroundNormalZ )
+#else
+	if ( pm.m_pEnt && pm.plane.normal[2] >= GAMEMOVEMENT_MAX_SLOPE_ANGLE )
+#endif
 	{
 		if ( overwriteEndpos )
 		{
@@ -3996,9 +4048,12 @@ void CGameMovement::CategorizePosition( void )
 
 	// Shooting up really fast.  Definitely not on ground.
 	// On ladder moving up, so not on ground either
-	// NOTE: 145 is a jump.
-#define NON_JUMP_VELOCITY 140.0f
-
+	// NOTE: 200 is a jump.
+#ifdef OFFSHORE_DLL
+#define NON_JUMP_VELOCITY mv->m_flMaxSpeed
+#else
+#define NON_JUMP_VELOCITY 200.0f
+#endif
 	float zvel = mv->m_vecVelocity[2];
 	bool bMovingUp = zvel > 0.0f;
 	bool bMovingUpRapidly = zvel > NON_JUMP_VELOCITY;
@@ -4043,9 +4098,7 @@ void CGameMovement::CategorizePosition( void )
 		TracePlayerBBox( bumpOrigin, point, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, pm );
 
 		// Was on ground, but now suddenly am not.  If we hit a steep plane, we are not on ground
-		float flStandableZ = 0.7;
-
-
+		float flStandableZ = GAMEMOVEMENT_MAX_SLOPE_ANGLE;
 
 		if ( !pm.m_pEnt || ( pm.plane.normal[2] < flStandableZ ) )
 		{
@@ -4577,6 +4630,7 @@ void CGameMovement::Duck( void )
 			{
 				player->m_Local.m_nDuckTimeMsecs = GAMEMOVEMENT_DUCK_TIME;
 				player->m_Local.m_bDucking = true;
+				StartDuck();
 			}
 			
 			// The player is in duck transition and not duck-jumping.
@@ -4786,7 +4840,11 @@ void CGameMovement::PlayerMove( void )
 	}
 	else
 	{
+#ifdef OFFSHORE_DLL
+		if( mv->m_vecVelocity.z > 600.0f )
+#else
 		if ( mv->m_vecVelocity.z > 250.0f )
+#endif
 		{
 			SetGroundEntity( NULL );
 		}
@@ -4909,7 +4967,7 @@ void CGameMovement::PerformFlyCollisionResolution( trace_t &pm, Vector &move )
 	}
 
 	// stop if on ground
-	if (pm.plane.normal[2] > 0.7)
+	if (pm.plane.normal[2] > GAMEMOVEMENT_MAX_SLOPE_ANGLE)
 	{		
 		base.Init();
 		if (mv->m_vecVelocity[2] < sv_gravity.GetFloat() * gpGlobals->frametime)

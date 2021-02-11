@@ -5,13 +5,14 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "basesdkcombatweapon_shared.h"
+#include "of_weaponbase.h"
 #include "basecombatweapon_shared.h"
 #include "in_buttons.h"
 #include "sdk_weapon_parse.h"
-#include "sdk_player_shared.h"
 #include "weapon_parse.h"
 #include "physics_saverestore.h"
+#include "of_shared_schemas.h"
+#include "sdk_player_shared.h"
 
 #if defined( CLIENT_DLL )
 
@@ -310,7 +311,7 @@ bool CBaseSDKCombatWeapon::Deploy( void )
 	m_flDecreaseShotsFired = gpGlobals->curtime;
 
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	if ( pPlayer )
 	{
@@ -343,7 +344,7 @@ void CBaseSDKCombatWeapon::PrimaryAttack( void )
 	BaseClass::PrimaryAttack();
 
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
 	m_bDelayFire = true;
@@ -356,7 +357,7 @@ void CBaseSDKCombatWeapon::PrimaryAttack( void )
 void CBaseSDKCombatWeapon::ItemPostFrame()
 {
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	if ( !(pPlayer->m_nButtons & (IN_ATTACK|IN_ATTACK2) ) )
 	{
@@ -410,7 +411,7 @@ void CBaseSDKCombatWeapon::FireBullets( const FireBulletsInfo_t &info )
 {
 	FireBulletsInfo_t modinfo = info;
 
-	modinfo.m_flPlayerDamage = GetSDKWpnData().m_flPlayerDamage;
+	modinfo.m_flPlayerDamage = GetSDKWpnData().m_iDamage;
 
 	BaseClass::FireBullets( modinfo );
 }
@@ -503,12 +504,12 @@ float	g_verticalBob;
 #if defined( CLIENT_DLL ) && ( !defined( HL2MP ) && !defined( PORTAL ) )
 
 #define	HL2_BOB_CYCLE_MIN	1.0f
-#define	HL2_BOB_CYCLE_MAX	0.45f
-#define	HL2_BOB			0.002f
-#define	HL2_BOB_UP		0.5f
+#define	HL2_BOB_CYCLE_MAX	(GetClass(player).flStepSpeed / 1000.0f)
+#define	HL2_BOB			cl_bob.GetFloat()
+#define	HL2_BOB_UP		cl_bobup.GetFloat()
 
 
-static ConVar	cl_bobcycle( "cl_bobcycle","0.8" );
+static ConVar	cl_bobcycle( "cl_bobcycle","0.45" );
 static ConVar	cl_bob( "cl_bob","0.002" );
 static ConVar	cl_bobup( "cl_bobup","0.5" );
 
@@ -530,7 +531,7 @@ float CBaseSDKCombatWeapon::CalcViewmodelBob( void )
 	static	float lastbobtime;
 	float	cycle;
 	
-	CBasePlayer *player = ToBasePlayer( GetOwner() );
+	CSDKPlayer *player = ToSDKPlayer( GetOwner() );
 	//Assert( player );
 
 	//NOTENOTE: For now, let this cycle continue when in the air, because it snaps badly without it
@@ -547,9 +548,9 @@ float CBaseSDKCombatWeapon::CalcViewmodelBob( void )
 	//FIXME: This maximum speed value must come from the server.
 	//		 MaxSpeed() is not sufficient for dealing with sprinting - jdw
 
-	speed = clamp( speed, -320, 320 );
+	speed = clamp( speed, -player->GetPlayerMaxSpeed(), player->GetPlayerMaxSpeed() );
 
-	float bob_offset = RemapVal( speed, 0, 320, 0.0f, 1.0f );
+	float bob_offset = RemapVal( speed, 0, player->GetPlayerMaxSpeed(), 0.0f, 1.0f );
 	
 	bobtime += ( gpGlobals->curtime - lastbobtime ) * bob_offset;
 	lastbobtime = gpGlobals->curtime;

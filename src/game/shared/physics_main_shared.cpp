@@ -2172,6 +2172,10 @@ void CBaseEntity::SetGroundEntity( CBaseEntity *ground )
 	{
 		RemoveFlag( FL_ONGROUND );
 	}
+
+#ifdef GAME_DLL
+	OnGroundChanged( oldGround, m_hGroundEntity );
+#endif
 }
 
 CBaseEntity *CBaseEntity::GetGroundEntity( void )

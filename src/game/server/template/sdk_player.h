@@ -1,16 +1,17 @@
+#ifndef SDK_PLAYER_H
+#define SDK_PLAYER_H
 #include "cbase.h"
 #include "predicted_viewmodel.h"
 #include "ai_speech.h"			// For expresser host
 #include "hintmessage.h"
 #include "sdk_shareddefs.h"
+#include "of_weaponbase.h"
+#include "sdk_playerclass_shared.h"
 
 //-----NonOptional Defines-----
 // Pretty much values here can be changed.
 // Should be self explanitory.
 //-----------------------------
-
-// How fast can the player walk?
-#define PLAYER_WALK_SPEED player_walkspeed.GetFloat()
 
 // Or pickup limits.
 #define PLAYER_MAX_LIFT_MASS 85
@@ -85,6 +86,7 @@ public:
 	}
 
 	virtual void Precache();
+	virtual void InitialSpawn();
 	virtual void Spawn();
 	virtual void UpdateClientData( void );
 	virtual void PostThink();
@@ -92,10 +94,60 @@ public:
 	virtual void Splash( void );
 	CLogicPlayerProxy	*GetPlayerProxy( void );
 
+	virtual int GetClassNumber() { return m_iClassNumber; }
+	
+	//==============
+	//	Bot Functions
+	//
+
+    virtual IBot *GetBotController() 
+	{
+        return m_pBotController;
+    }
+
+    virtual void SetBotController( IBot *pBot );
+    virtual void SetUpBot();
+
+    // Senses
+    virtual CAI_Senses *GetSenses() 
+	{
+        return m_pSenses;
+    }
+
+    virtual const CAI_Senses *GetSenses() const 
+	{
+        return m_pSenses;
+    }
+
+    virtual void CreateSenses();
+
+    virtual void SetDistLook( float flDistLook );
+
+    virtual int GetSoundInterests();
+    virtual int GetSoundPriority( CSound *pSound );
+
+    virtual bool QueryHearSound( CSound *pSound );
+    virtual bool QuerySeeEntity( CBaseEntity *pEntity, bool bOnlyHateOrFearIfNPC = false );
+
+    virtual void OnLooked( int iDistance );
+    virtual void OnListened();
+
+    virtual CSound *GetLoudestSoundOfType( int iType );
+    virtual bool SoundIsVisible( CSound *pSound );
+
+    virtual CSound *GetBestSound( int validTypes = ALL_SOUNDS );
+    virtual CSound *GetBestScent( void );
+
+	// End Bot
+
 #ifndef SWARM_DLL
 	void FirePlayerProxyOutput( const char *pszOutputName, variant_t variant, CBaseEntity *pActivator, CBaseEntity *pCaller );
 	EHANDLE			m_hPlayerProxy;	// Handle to a player proxy entity for quicker reference
 #endif
+
+	virtual bool ClientCommand(const CCommand &args);
+
+	virtual void UpdateSpeed();
 
 	// Use + Pickup
 	virtual void PlayerUse( void );
@@ -124,6 +176,15 @@ public:
 	virtual void  HandleSpeedChanges( void );
 	bool  m_bPlayUseDenySound;		// Signaled by PlayerUse, but can be unset by HL2 ladder code...
 
+	virtual float	GetPlayerMaxSpeed();
+	virtual void	UpdateStepSound(surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity);
+	virtual void	SetStepSoundTime(stepsoundtimes_t iStepSoundTime, bool bWalking);
+
+	CBaseSDKCombatWeapon*	GetActiveSDKWeapon() const 
+	{ 
+		return dynamic_cast<CBaseSDKCombatWeapon *>(GetActiveWeapon()); 
+	};
+
 	// Damage
 	virtual bool PassesDamageFilter( const CTakeDamageInfo &info );
 	virtual int OnTakeDamage( const CTakeDamageInfo &info );
@@ -151,6 +212,8 @@ public:
 	unsigned int m_iDisplayHistoryBits;
 	bool m_bShowHints;
 
+	virtual void	OnGroundChanged(CBaseEntity *oldGround, CBaseEntity *newGround);
+
 	// Hint Flags: These are flags to tick when the hint shows. This prevents players feeling that the game think's they are stupid by
 	// repeating the same hint over, and over.
 	#define DHF_GAME_STARTED		( 1 << 1 )
@@ -176,24 +239,37 @@ public:
 		bool bDoEffects,
 		float x,
 		float y );
+		
+		CSDKPlayerShared m_PlayerShared;
 private:
 		float				m_flTimeUseSuspended;
 
 		Vector				m_vecMissPositions[16];
 		int					m_nNumMissPositions;
+		
+		bool				m_bWelcome;
+
+		CNetworkVar( int, m_iClassNumber );
 
 protected:
 		virtual void		ItemPostFrame();
 		virtual void		PlayUseDenySound();
+protected:
+		IBot *m_pBotController;
+		CAI_Senses *m_pSenses;
+
 };
 
-inline CSDKPlayer *To_SDKPlayer( CBaseEntity *pEntity )
+inline CSDKPlayer *ToSDKPlayer( CBaseEntity *pEntity )
 {
-	if ( !pEntity || !pEntity->IsPlayer() )
+	if ( !pEntity )
+		return NULL;
+	
+	if( !pEntity->IsPlayer() )
 		return NULL;
 
-#ifdef _DEBUG
 	Assert( dynamic_cast<CSDKPlayer*>( pEntity ) != 0 );
-#endif
 	return static_cast< CSDKPlayer* >( pEntity );
 }
+
+#endif

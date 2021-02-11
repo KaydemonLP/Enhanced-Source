@@ -104,6 +104,10 @@ public:
 
 	virtual int HandleSpectatorKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
 
+	virtual bool	IsInfoPanelAllowed() { return true; }
+	virtual void	InfoPanelDisplayed() { }
+	virtual bool	IsHTMLInfoPanelAllowed() { return true; }
+
 	virtual void InitChatHudElement( void );
 	virtual void InitWeaponSelectionHudElement( void );
 

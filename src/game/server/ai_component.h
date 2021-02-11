@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -28,25 +28,29 @@ class CAI_Component
 {
 	DECLARE_CLASS_NOBASE( CAI_Component );
 protected:
-	CAI_Component( CAI_BaseNPC *pOuter = NULL )
-	 : m_pOuter(pOuter)
-	{
-	}
+    CAI_Component( CAI_BaseNPC *pOuter = NULL );
 
 	virtual ~CAI_Component() {}
 
 public:
-	virtual void SetOuter( CAI_BaseNPC *pOuter )	{ m_pOuter = pOuter; }
+	virtual void SetOuter( CBaseCombatCharacter *pOuter )	{ m_pOuter = pOuter; }
 
-	CAI_BaseNPC *		GetOuter() 			{ return m_pOuter; }
-	const CAI_BaseNPC *	GetOuter() const 	{ return m_pOuter; }
+    CAI_BaseNPC *		GetOuter();
+    const CAI_BaseNPC *	GetOuter() const;
+
+    CBaseCombatCharacter *GetCharacter() {
+        return m_pOuter;
+    }
+
+    const CBaseCombatCharacter *GetCharacter() const {
+        return m_pOuter;
+    }
 
 	Hull_t				GetHullType() const;
 	float 				GetHullWidth() const;
 	float 				GetHullHeight() const;
 	const Vector &		GetHullMins() const;
 	const Vector &		GetHullMaxs() const;
-	int					GetHullTraceMask() const;
 
 protected:
 	//
@@ -139,7 +143,7 @@ public:
 	}
 
 private:
-	CAI_BaseNPC *m_pOuter;
+    CBaseCombatCharacter *m_pOuter;
 };
 
 //-----------------------------------------------------------------------------

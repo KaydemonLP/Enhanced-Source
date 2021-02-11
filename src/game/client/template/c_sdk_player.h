@@ -3,9 +3,26 @@
 // Purpose: 
 //		
 //=============================================================================
-
+#ifndef OF_PLAYER_H
+#define OF_PLAYER_H
 #include "cbase.h"
 #include "weapons/c_basesdkcombatweapon.h"
+#include "sdk_playerclass_shared.h"
+
+#undef CSDKPlayer
+
+
+// Client specific.
+#ifdef CLIENT_DLL
+
+	EXTERN_RECV_TABLE( DT_SDKPlayerShared );
+
+// Server specific.
+#else
+
+	EXTERN_SEND_TABLE( DT_SDKPlayerShared );
+
+#endif
 
 class C_SDKPlayer : public C_BasePlayer
 {
@@ -40,6 +57,11 @@ public:
 	void			PerformClientSideObstacleAvoidance( float flFrameTime, CUserCmd *pCmd );
 	void			PerformClientSideNPCSpeedModifiers( float flFrameTime, CUserCmd *pCmd );
 
+	virtual float	GetPlayerMaxSpeed();
+	virtual void	UpdateStepSound(surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity);
+	virtual void	SetStepSoundTime(stepsoundtimes_t iStepSoundTime, bool bWalking);
+
+	virtual int 	GetClassNumber() { return m_iClassNumber; }
 public:
 	void FireBullet( 
 		Vector vecSrc, 
@@ -70,18 +92,25 @@ public:
 
 	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
 
+	CSDKPlayerShared 	m_PlayerShared;
 private:
 	bool	TestMove( const Vector &pos, float fVertDist, float radius, const Vector &objPos, const Vector &objDir );
 
 	float	m_flSpeedMod;
 	QAngle m_angRender;
 
+	CNetworkVar( int, m_iClassNumber );
 };
 
-inline C_SDKPlayer* To_SDKPlayer( CBaseEntity *pEntity )
+inline C_SDKPlayer* ToSDKPlayer( CBaseEntity *pEntity )
 {
 	if ( !pEntity )
 		return NULL;
+	
+	if ( !pEntity->IsPlayer() )
+		return NULL;
+
 	Assert( dynamic_cast< C_SDKPlayer* >( pEntity ) != NULL );
 	return static_cast< C_SDKPlayer* >( pEntity );
 }
+#endif

@@ -127,6 +127,10 @@
 #include "IGameUIFuncs.h"
 #endif
 
+#ifdef OFFSHORE_DLL
+#include "of_shared_schemas.h"
+#endif
+
 extern IToolFrameworkServer *g_pToolFrameworkServer;
 extern IParticleSystemQuery *g_pParticleSystemQuery;
 
@@ -800,8 +804,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetAchievementSaveRestoreBlockHandler() );
 	g_pGameSaveRestoreBlockSet->AddBlockHandler( GetVScriptSaveRestoreBlockHandler() );
 
-
-
 	bool bInitSuccess = false;
 	if ( sv_threaded_init.GetBool() )
 	{
@@ -835,6 +837,11 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		bInitSuccess = InitGameSystems( appSystemFactory );
 		COM_TimestampedLog( "InitGameSystems - Finish" );
 	}
+	
+#ifdef OFFSHORE_DLL
+	ParseSharedSchemas();
+#endif
+	
 	// try to get debug overlay, may be NULL if on HLDS
 	debugoverlay = (IVDebugOverlay *)appSystemFactory( VDEBUG_OVERLAY_INTERFACE_VERSION, NULL );
 

@@ -28,6 +28,8 @@ LINK_ENTITY_TO_CLASS( player, C_SDKPlayer );
 IMPLEMENT_CLIENTCLASS_DT(C_SDKPlayer, DT_SDKPlayer, CSDKPlayer)
 	RecvPropBool(  RECVINFO(m_bPlayerPickedUpObject) ),
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
+	RecvPropInt( RECVINFO( m_iClassNumber ) ),
+	RecvPropDataTable( RECVINFO_DT( m_PlayerShared ), 0, &REFERENCE_RECV_TABLE( DT_SDKPlayerShared ) ),
 END_RECV_TABLE()
 
 BEGIN_PREDICTION_DATA( C_SDKPlayer )
@@ -63,7 +65,7 @@ C_SDKPlayer::C_SDKPlayer()
 	// HACK! Close UI on spawn. Fixes bug with loading save games.
 	engine->ClientCmd("gameui_hide");
 #endif
-
+	m_PlayerShared.m_pOuter = this;
 }
 
 C_SDKPlayer::~C_SDKPlayer( void )
@@ -603,7 +605,7 @@ void C_SDKPlayer::BuildTransformations( CStudioHdr *hdr, Vector *pos, Quaternion
 
 C_SDKPlayer* C_SDKPlayer::GetLocalPlayer( int nSlot )
 {
-	return To_SDKPlayer( C_BasePlayer::GetLocalPlayer() );
+	return ToSDKPlayer( C_BasePlayer::GetLocalPlayer() );
 }
 
 

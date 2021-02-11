@@ -1,10 +1,14 @@
 #include "cbase.h"
-#include "singleplay_gamerules.h"
+#include "teamplay_gamerules.h"
 #include "sdk_gamerules_sp.h"
 #include "ammodef.h"
+#include "of_shared_schemas.h"
 
 #ifdef GAME_DLL
 	#include "voice_gamemgr.h"
+	#include "sdk_player.h"
+#else
+	#include "c_sdk_player.h"
 #endif
 
 
@@ -104,7 +108,7 @@ CAmmoDef* GetAmmoDef()
 //=========================================================
 bool CSDKGameRules::IsMultiplayer( void )
 {
-	return false;
+	return true;
 }
 
 void CSDKGameRules::PlayerThink( CBasePlayer *pPlayer )
@@ -112,6 +116,35 @@ void CSDKGameRules::PlayerThink( CBasePlayer *pPlayer )
 }
 
 #ifdef GAME_DLL
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CSDKGameRules::Precache(void)
+{
+	BaseClass::Precache();
+
+	GetClassManager()->PrecacheClasses();
+}
+
+bool CSDKGameRules::ClientCommand( CBaseEntity *pEdict, const CCommand &args )
+{
+	CSDKPlayer *pPlayer = ToSDKPlayer( pEdict );
+	gameeventmanager->LoadEventsFromFile("resource/ModEvents.res");
+
+	//const char *pcmd = args[0];
+	if( pPlayer && pPlayer->ClientCommand( args ) )
+	{
+		return true;
+	}
+
+	return BaseClass::ClientCommand( pEdict, args );
+}
+
+float CSDKGameRules::FlPlayerFallDamage( CBasePlayer *pPlayer )
+{
+	return 0.0f;
+}
 
 // This being required here is a bug. It should be in shared\BaseGrenade_shared.cpp
 ConVar sk_plr_dmg_grenade( "sk_plr_dmg_grenade","0");		

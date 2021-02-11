@@ -4,7 +4,7 @@
 //
 //=============================================================================//
 
-#include "weapons/basesdkcombatweapon_shared.h"
+#include "of_weaponbase.h"
 
 #ifndef BASESDKCOMBATWEAPON_H
 #define BASESDKCOMBATWEAPON_H

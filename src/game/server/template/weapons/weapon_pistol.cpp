@@ -351,7 +351,7 @@ bool CWeaponPistol::Reload( void )
 	}
 
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
 	m_bDelayFire = true;

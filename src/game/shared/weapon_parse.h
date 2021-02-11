@@ -115,7 +115,7 @@ public:
 
 // CLIENT DLL
 	// Sprite data, read from the data file
-	int						iSpriteCount;
+	int								iSpriteCount;
 	CHudTexture						*iconActive;
 	CHudTexture	 					*iconInactive;
 	CHudTexture 					*iconAmmo;

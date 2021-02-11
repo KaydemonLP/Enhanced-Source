@@ -1,0 +1,1 @@
+devtools\bin\vpc.exe /offshore +game /mksln offshore_game.sln /2013

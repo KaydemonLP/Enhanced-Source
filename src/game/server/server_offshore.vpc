@@ -1,0 +1,130 @@
+//-----------------------------------------------------------------------------
+//	SERVER_OFFSHORE.VPC
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+// BASED ON DEFERRED_TEMPLATE.VPC
+
+$Macro SRCDIR		"..\.."
+$Macro GAMENAME 	"offshore"
+
+$Include "$SRCDIR\game\server\server_base.vpc"
+$Include "$SRCDIR\game\server\server_deferred_base.vpc"
+$Include "$SRCDIR\game\shared\shared_offshore.vpc"
+
+
+$Configuration
+{
+	$Compiler
+	{
+		$AdditionalIncludeDirectories	"$BASE;.\hl2;.\template;.\multiplayer;.\of;$SRCDIR/game/shared;$SRCDIR/game/shared/of;$SRCDIR/game/shared/of/weapons;$SRCDIR/game/shared/hl2;$SRCDIR/game/shared/multiplayer;$SRCDIR/game/shared/template"
+		$PreprocessorDefinitions		"$BASE;SWARM_DLL;TEMPLATE_DLL;OFFSHORE_DLL"
+	}
+}
+
+$Project "Server (Offshore)"
+{
+	$Folder	"Source Files"
+	{
+
+		$File	"monstermaker.cpp"
+		$File	"monstermaker.h"
+
+		$Folder "Template"
+		{
+			$File	"template\player_pickup_controller.cpp"
+			$File	"template\sdk_client.cpp"
+			$File	"template\sdk_eventlog.cpp"
+			$File	"template\sdk_player.h"
+			$File	"template\sdk_player.cpp"
+			$File	"template\sdk_playermove.cpp"
+			$File	"template\test_entity.cpp"
+			$File	"template\weapon_cubemap.cpp"
+
+			$Folder	"Weapons"
+			{
+				$File	"template\weapons\basebludgeonweapon.cpp"
+				$File	"template\weapons\basebludgeonweapon.h"
+				$File	"template\weapons\basesdkcombatweapon.cpp"
+				$File	"template\weapons\weapon_shotgun.cpp"
+				$File	"template\weapons\weapon_smg.cpp"
+				$File	"template\weapons\weapon_pistol.cpp"
+				$File	"template\weapons\weapon_crowbar.cpp"
+			}
+		}
+		
+		$Folder	"Offshore"
+		{
+			$Folder	"Bots"
+			{
+				$Folder	"Components"
+				{
+					$File	"of/bots/components/bot_components.h"
+					$File	"of/bots/components/bot_component_attack.cpp"
+					$File	"of/bots/components/bot_component_decision.cpp"
+					$File	"of/bots/components/bot_component_follow.cpp"
+					$File	"of/bots/components/bot_component_locomotion.cpp"
+					$File	"of/bots/components/bot_component_memory.cpp"
+					$File	"of/bots/components/bot_component_vision.cpp"
+				}
+
+				$Folder	"Interfaces"
+				{
+					$File	"of/bots/interfaces/ibot.h"
+					$File	"of/bots/interfaces/ibotattack.h"
+					$File	"of/bots/interfaces/ibotcomponent.h"
+					$File	"of/bots/interfaces/ibotdecision.h"
+					$File	"of/bots/interfaces/ibotfollow.h"
+					$File	"of/bots/interfaces/ibotlocomotion.h"
+					$File	"of/bots/interfaces/ibotmemory.h"
+					$File	"of/bots/interfaces/ibotschedule.h"
+					$File	"of/bots/interfaces/ibotvision.h"
+					$File	"of/bots/interfaces/improv_locomotor.h"
+				}
+
+				$Folder	"Schedules"
+				{
+					$File	"of/bots/schedules/bot_schedule.cpp"
+					$File	"of/bots/schedules/bot_schedules.h"
+					$File	"of/bots/schedules/bot_schedule_call_backup.cpp"
+					$File	"of/bots/schedules/bot_schedule_change_weapon.cpp"
+					$File	"of/bots/schedules/bot_schedule_cover.cpp"
+					$File	"of/bots/schedules/bot_schedule_defend_spawn.cpp"
+					$File	"of/bots/schedules/bot_schedule_help_dejected_friend.cpp"
+					$File	"of/bots/schedules/bot_schedule_hide_and_heal.cpp"
+					$File	"of/bots/schedules/bot_schedule_hide_and_reload.cpp"
+					$File	"of/bots/schedules/bot_schedule_hunt_enemy.cpp"
+					$File	"of/bots/schedules/bot_schedule_investigate_location.cpp"
+					$File	"of/bots/schedules/bot_schedule_move_aside.cpp"
+					$File	"of/bots/schedules/bot_schedule_reload.cpp"
+				}
+
+				$File	"of/bots/bot.cpp"
+				$File	"of/bots/bot.h"
+				$File	"of/bots/bot_ai.cpp"
+				$File	"of/bots/bot_debug.cpp"
+				$File	"of/bots/bot_defs.h"
+				$File	"of/bots/bot_maker.cpp"
+				$File	"of/bots/bot_maker.h"
+				$File	"of/bots/bot_manager.cpp"
+				$File	"of/bots/bot_manager.h"
+				$File	"of/bots/bot_memory.cpp"
+				$File	"of/bots/bot_senses.cpp"
+				$File	"of/bots/bot_skill.cpp"
+				$File	"of/bots/bot_squad.cpp"
+				$File	"of/bots/bot_squad.h"
+				$File	"of/bots/bot_state.cpp"
+				$File	"of/bots/bot_utils.cpp"
+				$File	"of/bots/bot_utils.h"
+				$File	"of/bots/in_utils.cpp"
+				$File	"of/bots/in_utils.h"
+				$File	"of/bots/nav_path.cpp"
+				$File	"of/bots/nav_path.h"
+				$File	"of/bots/squad.cpp"
+				$File	"of/bots/squad.h"
+				$File	"of/bots/squad_manager.cpp"
+				$File	"of/bots/squad_manager.h"
+			}			
+		}
+	}
+}

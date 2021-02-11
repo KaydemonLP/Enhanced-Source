@@ -147,6 +147,10 @@
 #include "deferred/deferred_shared_common.h"
 #endif
 
+#ifdef OFFSHORE_DLL
+#include "of_shared_schemas.h"
+#endif
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -1023,7 +1027,7 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 		{
 			GetFullscreenClientMode()->EnableWithRootPanel( VGui_GetFullscreenRootVPANEL() );
 		}
-	}	
+	}
 
 	// Each mod is required to implement this
 	view = GetViewRenderInstance();
@@ -1221,8 +1225,10 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 
 	g_pcv_ThreadMode = g_pCVar->FindVar( "host_thread_mode" );
 
-
-
+#ifdef OFFSHORE_DLL
+	ParseSharedSchemas();
+//	FMODManager()->InitFMOD();
+#endif
 
 	COM_TimestampedLog( "InitGameSystems" );
 

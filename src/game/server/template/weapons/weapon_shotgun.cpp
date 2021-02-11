@@ -9,7 +9,7 @@
 
 #include "cbase.h"
 #include "npcevent.h"
-#include "basesdkcombatweapon_shared.h"
+#include "of_weaponbase.h"
 #include "basecombatcharacter.h"
 #include "ai_basenpc.h"
 #include "player.h"
@@ -340,7 +340,7 @@ bool CWeaponShotgun::Reload( void )
 		return false;
 
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
 	m_bDelayFire = false;
@@ -444,7 +444,7 @@ void CWeaponShotgun::DryFire( void )
 bool CWeaponShotgun::Deploy()
 {
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
 	m_bDelayFire = true;
@@ -505,7 +505,7 @@ void CWeaponShotgun::PrimaryAttack( void )
 		m_bNeedPump = true;
 	}
 
-	CSDKPlayer *pNewPlayer = To_SDKPlayer(pPlayer);
+	CSDKPlayer *pNewPlayer = ToSDKPlayer(pPlayer);
 
 	pNewPlayer->m_iShotsFired++;
 	m_bDelayFire = true;

@@ -19,6 +19,8 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "simtimer.h"
 #include "vprof.h"
+#include "ai_senses.h"
+#include "soundent.h"
 
 class CLogicPlayerProxy;
 
@@ -237,12 +239,15 @@ public:
 
 	virtual CBotCmd GetLastUserCommand();
 
-private:
+public:
 	CBasePlayer *m_pParent; 
 };
 
 
-class CBasePlayer : public CBaseCombatCharacter
+class IBot;
+class CSquad;
+
+class CBasePlayer : public CBaseCombatCharacter 
 {
 public:
 	DECLARE_CLASS( CBasePlayer, CBaseCombatCharacter );
@@ -267,7 +272,49 @@ public:
 	
 	// IPlayerInfo passthrough (because we can't do multiple inheritance)
 	IPlayerInfo *GetPlayerInfo() { return &m_PlayerInfo; }
-	IBotController *GetBotController() { return &m_PlayerInfo; }
+	virtual IBot *GetBotController() {
+		return NULL;
+	}
+
+	//-----------------------------------------------------
+	// Start Bot
+	//-----------------------------------------------------
+
+	virtual void SetBotController( IBot *pBot ) { }
+	virtual void SetUpBot() { }
+
+	virtual CAI_Senses *GetSenses() {
+		return NULL;
+	}
+
+	virtual const CAI_Senses *GetSenses() const {
+		return NULL;
+	}
+
+	virtual CSound *GetBestSound( int validTypes = ALL_SOUNDS ) {
+		return NULL;
+	}
+
+	virtual CSound *GetBestScent( void ) {
+		return NULL;
+	}
+
+	// Squad
+	virtual CSquad *GetSquad() {
+		return NULL;
+	}
+
+	virtual void SetSquad( CSquad *pSquad ) { }
+	virtual void SetSquad( const char *name ) { }
+
+	virtual void OnNewLeader( CBasePlayer *pMember ) { }
+	virtual void OnMemberTakeDamage( CBasePlayer *pMember, const CTakeDamageInfo &info ) { }
+	virtual void OnMemberDeath( CBasePlayer *pMember, const CTakeDamageInfo &info ) { }
+	virtual void OnMemberReportEnemy( CBasePlayer *pMember, CBaseEntity *pEnemy ) { }
+
+	//-----------------------------------------------------
+	// End Bot
+	//-----------------------------------------------------
 
 	virtual void			SetModel( const char *szModelName );
 	void					SetBodyPitch( float flPitch );
@@ -754,6 +801,8 @@ public:
 	void	SetUseEntity( CBaseEntity *pUseEntity );
 	virtual CBaseEntity* GetUseEntity( void );
 	virtual CBaseEntity* GetPotentialUseEntity( void );
+	
+	virtual float GetPlayerMaxSpeed();
 
 	// Used to set private physics flags PFLAG_*
 	void	SetPhysicsFlag( int nFlag, bool bSet );
@@ -1162,6 +1211,7 @@ protected:
 	friend class CPortalGameMovement;
 	friend class CASW_MarineGameMovement;
 	friend class CPaintGameMovement;
+	friend class COFGameMovement;
 	
 	// Accessors for gamemovement
 	bool IsDucked( void ) const { return m_Local.m_bDucked; }

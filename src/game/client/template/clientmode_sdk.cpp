@@ -40,7 +40,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-ConVar fov_desired( "fov_desired", "75", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.", true, 75.0, true, 90.0 );
+ConVar fov_desired( "fov_desired", "75", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.");
 ConVar default_fov( "default_fov", "90", FCVAR_CHEAT );
 
 extern bool IsInCommentaryMode( void );
@@ -212,7 +212,7 @@ protected:
 		SetPaintBackgroundEnabled( false );
 	}
 
-	virtual void CreateDefaultPanels( void ) { /* don't create any panels yet*/ };
+	virtual void CreateDefaultPanels( void ) { BaseClass::CreateDefaultPanels(); };
 };
 //--------------------------------------------------------------------------------------------------------
 

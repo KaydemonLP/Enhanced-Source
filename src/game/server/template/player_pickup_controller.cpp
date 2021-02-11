@@ -1124,7 +1124,7 @@ void CPlayerPickupController::Shutdown( bool bThrown )
 		bClearVelocity = true;
 	}
 
-	CSDKPlayer *pOwner = (CSDKPlayer *)To_SDKPlayer( m_pPlayer );
+	CSDKPlayer *pOwner = (CSDKPlayer *)ToSDKPlayer( m_pPlayer );
 	pOwner->ClearUsePickup();
 
 	m_grabController.DetachEntity( bClearVelocity );

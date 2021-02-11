@@ -98,6 +98,16 @@ float CBasePlayer::GetTimeBase( void ) const
 	return m_nTickBase * TICK_INTERVAL;
 }
 
+float CBasePlayer::GetPlayerMaxSpeed()
+{
+	// player max speed is the lower limit of m_flMaxSpeed and sv_maxspeed
+	float fMaxSpeed = sv_maxspeed.GetFloat();
+	if ( MaxSpeed() > 0.0f && MaxSpeed() < fMaxSpeed )
+		fMaxSpeed = MaxSpeed();
+
+	return fMaxSpeed;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Called every usercmd by the player PreThink
 //-----------------------------------------------------------------------------
@@ -485,6 +495,8 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 	float velwalk;
 	bool fLadder;
 
+// Offshore handles it's step sounds elsewhere
+#ifndef OFFSHORE_DLL
 	if ( m_flStepSoundTime > 0 )
 	{
 		m_flStepSoundTime -= 1000.0f * gpGlobals->frametime;
@@ -493,6 +505,7 @@ void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOri
 			m_flStepSoundTime = 0;
 		}
 	}
+#endif
 
 	if ( m_flStepSoundTime > 0 )
 		return;

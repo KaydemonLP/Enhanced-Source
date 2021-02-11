@@ -96,6 +96,8 @@ public:
 	virtual void	MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 
 	virtual void	GetToolRecordingState( KeyValues *msg );
+	
+	virtual float GetPlayerMaxSpeed();
 
 	void	SetAnimationExtension( const char *pExtension );
 
@@ -636,6 +638,7 @@ private:
 	friend class CPortalGameMovement;
 	friend class CASW_MarineGameMovement;
 	friend class CPaintGameMovement;
+	friend class COFGameMovement;
 	
 	// Accessors for gamemovement
 	float GetStepSize( void ) const { return m_Local.m_flStepSize; }

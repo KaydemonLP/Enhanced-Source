@@ -7,12 +7,7 @@
 #include "basecombatweapon_shared.h"
 #include "sdk_weapon_parse.h"
 
-
-#ifndef BASESDKCOMBATWEAPON_SHARED_H
-#define BASESDKCOMBATWEAPON_SHARED_H
-#ifdef _WIN32
 #pragma once
-#endif
 
 #define CROSSHAIR_CONTRACT_PIXELS_PER_SECOND	7.0f
 
@@ -108,5 +103,3 @@ protected:
 
 	bool			m_bForcePickup;
 };
-
-#endif // BASEHLCOMBATWEAPON_SHARED_H

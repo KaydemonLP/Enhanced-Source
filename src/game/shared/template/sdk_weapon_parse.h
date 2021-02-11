@@ -4,11 +4,7 @@
 //
 //=============================================================================//
 
-#ifndef SDK_WEAPON_PARSE_H
-#define SDK_WEAPON_PARSE_H
-#ifdef _WIN32
 #pragma once
-#endif
 
 #include "networkvar.h"
 
@@ -26,9 +22,24 @@ public:
 
 
 public:
+	//  Ammo
+	int		m_iReserveAmmo;
+	
+	// Fire Things
+	float	m_flSpread;
+	float	m_flFireRate;
+	int		m_iProjectileType;
+	
+	// Damage/OnHit things
+	int		m_iDamage;
+	
+	// Timers
+	float	m_flDrawTime;
 
-	float		m_flPlayerDamage;
+	bool	m_bReloadSingly;
+	float	m_flReloadStartTime;
+	float	m_flReloadTime;
+
+	// Visuals
+	int		m_iHandHolding;
 };
-
-
-#endif // HL2MP_WEAPON_PARSE_H

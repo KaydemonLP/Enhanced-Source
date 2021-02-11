@@ -131,6 +131,14 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 	msg.ReadString( panelname, sizeof(panelname) );
 
 	bool bShow = msg.ReadByte()!= 0;
+	
+	IViewPortPanel *viewport = GetViewPortInterface()->FindPanelByName( panelname );
+
+	if ( !viewport )
+	{
+		// DevMsg("VGUIMenu: couldn't find panel '%s'.\n", panelname );
+		return;
+	}
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 
@@ -140,7 +148,8 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 
 	if ( count > 0 )
 	{
-		keys = new KeyValues("data");
+		KeyValues *keys = new KeyValues("data");
+		//Msg( "MsgFunc_VGUIMenu:\n" );
 
 		for ( int i=0; i<count; i++)
 		{
@@ -149,12 +158,43 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 
 			msg.ReadString( name, sizeof(name) );
 			msg.ReadString( data, sizeof(data) );
+			//Msg( "  %s <- '%s'\n", name, data );
 
 			keys->SetString( name, data );
 		}
-	}
 
-	GetViewPortInterface()->ShowPanel( panelname, bShow, keys, true );
+		// !KLUDGE! Whitelist of URL protocols formats for MOTD
+		if (
+			!V_stricmp( panelname, PANEL_INFO ) // MOTD
+			&& keys->GetInt( "type", 0 ) == 2 // URL message type
+		) {
+			const char *pszURL = keys->GetString( "msg", "" );
+			if ( Q_strncmp( pszURL, "http://", 7 ) != 0 && Q_strncmp( pszURL, "https://", 8 ) != 0 && Q_stricmp( pszURL, "about:blank" ) != 0 )
+			{
+				Warning( "Blocking MOTD URL '%s'; must begin with 'http://' or 'https://' or be about:blank\n", pszURL );
+				keys->deleteThis();
+				return;
+			}
+		}
+
+		viewport->SetData( keys );
+
+		keys->deleteThis();
+	}
+	
+	// is the server trying to show an MOTD panel? Check that it's allowed right now.
+	ClientModeShared *mode = ( ClientModeShared * )GetClientModeNormal();
+	if ( Q_stricmp( panelname, PANEL_INFO ) == 0 && mode )
+	{
+		if ( !mode->IsInfoPanelAllowed() )
+		{
+			return;
+		}
+		else
+		{
+			mode->InfoPanelDisplayed();
+		}
+	}
 
 	// Don't do this since ShowPanel auto-deletes the keys
 	// keys->deleteThis();
@@ -167,6 +207,8 @@ static void __MsgFunc_VGUIMenu( bf_read &msg )
 			GetHud().SetScreenShotTime( gpGlobals->curtime + 1.0 ); // take a screenshot in 1 second
 		}
 	}
+
+	GetViewPortInterface()->ShowPanel( panelname, bShow, keys, true );
 }
 
 

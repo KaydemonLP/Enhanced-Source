@@ -208,7 +208,7 @@ void CSDKMachineGun::DoMachineGunKick( CBasePlayer *pPlayer, float dampEasy, flo
 bool CSDKMachineGun::Deploy( void )
 {
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired = 0;
 	m_nShotsFired = 0;
@@ -324,7 +324,7 @@ bool CSDKSelectFireMachineGun::Deploy( void )
 {
 	// Forget about any bursts this weapon was firing when holstered
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = To_SDKPlayer(pFakePlayer);
+	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired = 0;
 	m_nShotsFired = 0;
@@ -372,7 +372,7 @@ void CSDKSelectFireMachineGun::PrimaryAttack( void )
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if ( pOwner )
 	{
-		CSDKPlayer *pPlayer = To_SDKPlayer(pOwner);
+		CSDKPlayer *pPlayer = ToSDKPlayer(pOwner);
 		pPlayer->m_iShotsFired++;
 		m_bDelayFire = true;
 
@@ -412,7 +412,7 @@ void CSDKSelectFireMachineGun::SecondaryAttack( void )
 	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
 	if ( pOwner )
 	{
-		CSDKPlayer *pPlayer = To_SDKPlayer(pOwner);
+		CSDKPlayer *pPlayer = ToSDKPlayer(pOwner);
 		pPlayer->m_iShotsFired++;
 		m_bDelayFire = true;
 

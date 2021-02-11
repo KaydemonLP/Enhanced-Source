@@ -64,6 +64,10 @@ IPredictionSystem *IPredictionSystem::g_pPredictionSystems = NULL;
 
 void CSDKPlayerMove::SetupMove( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *pHelper, CMoveData *move )
 {
+	CSDKPlayer *pOFPlayer = ToSDKPlayer(player);
+
+	pOFPlayer->UpdateSpeed();
+
 	// Call the default SetupMove code.
 	BaseClass::SetupMove( player, ucmd, pHelper, move );
 

@@ -131,6 +131,10 @@ public:
 
 	virtual void	SetBlurFade( float scale ) = 0;
 	virtual float	GetBlurFade( void ) = 0;
+	
+	virtual bool	IsInfoPanelAllowed() = 0;
+	virtual void	InfoPanelDisplayed() = 0;
+	virtual bool	IsHTMLInfoPanelAllowed() = 0;
 };	
 
 extern IClientMode *GetClientMode();

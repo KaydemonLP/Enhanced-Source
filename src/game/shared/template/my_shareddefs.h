@@ -4,11 +4,7 @@
 //
 //=============================================================================//
 
-#ifndef MY_SHAREDDEFS_H
-#define MY_SHAREDDEFS_H
-#ifdef _WIN32
 #pragma once
-#endif
 
 // THIS IS CALLED FROM SHAREDDEFS.H. PLACE YOUR NEW SHAREDDEFS.H HERE!
 // This exist so you can easily list and manage additonal shareddef files 
@@ -16,6 +12,3 @@
 
 // Our Game-based shareddefs go here.
 #include "sdk_shareddefs.h"
-
-
-#endif // MY_SHAREDDEFS_H

@@ -1,0 +1,43 @@
+//-----------------------------------------------------------------------------
+//	SHARED_PL.VPC
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+
+$Macro SHARED		"$SRCDIR/game/shared"
+
+$Project
+{
+	$Folder	"Source Files"
+	{
+		$Folder	"Shared"
+		{
+			$File	"$SHARED\template\sdk_gamemovement.cpp"
+			$File	"$SHARED\template\sdk_gamerules_sp.cpp"
+			$File	"$SHARED\template\sdk_gamerules_sp.h"
+			$File	"$SHARED\template\sdk_shareddefs.h"
+			$File	"$SHARED\template\sdk_usermessages.cpp"
+			$File	"$SHARED\template\sdk_weapon_parse.cpp"
+			$File	"$SHARED\template\sdk_weapon_parse.h"
+			$File	"$SHARED\template\sdk_playerclass_shared.cpp"
+			$File	"$SHARED\template\sdk_playerclass_shared.h"
+			$File	"$SHARED\template\sdk_player_shared.h"
+
+			$Folder	"OF"
+			{
+				$File	"$SHARED\of\of_class_parse.cpp"
+				$File	"$SHARED\of\of_class_parse.h"			
+				$File	"$SHARED\of\of_shared_schemas.cpp"
+				$File	"$SHARED\of\of_shared_schemas.h"
+				$File	"$SHARED\of\of_weaponbase.cpp"
+				$File	"$SHARED\of\of_weaponbase.h"
+				
+				$Folder "Weapons"
+				{
+					$File	"$SHARED\of\weapons\of_basic_weapons.cpp"
+					$File	"$SHARED\of\weapons\of_basic_weapons.h"
+				}
+			}
+		}
+	}
+}		

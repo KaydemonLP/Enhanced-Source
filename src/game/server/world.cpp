@@ -737,11 +737,14 @@ void CWorld::Precache( void )
 	g_pLastSpawn = NULL;
 	g_Language.SetValue( LANGUAGE_ENGLISH );	// TODO use VGUI to get current language
 
+/*
+Why???
+The convar is development only anyways
 #ifndef INFESTED_DLL
 	ConVarRef stepsize( "sv_stepsize" );
 	stepsize.SetValue( 18 );
 #endif
-
+*/
 	ConVarRef roomtype( "room_type" );
 	roomtype.SetValue( 0 );
 

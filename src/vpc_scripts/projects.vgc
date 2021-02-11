@@ -9,6 +9,7 @@ $Project "client"
 	"game\client\client_episodic.vpc"		[$HL2_EPISODIC]
 	"game\client\client_vectronic.vpc"		[$VECTRONIC]
 	"game\client\client_swarm.vpc"		[$SWARM]
+	"game\client\client_offshore.vpc"	[$OFFSHORE]
 }
 
 $Project "server"
@@ -22,6 +23,7 @@ $Project "server"
 	"game\server\server_episodic.vpc"		[$HL2_EPISODIC]
 	"game\server\server_vectronic.vpc"		[$VECTRONIC]
 	"game\server\server_swarm.vpc"		[$SWARM]
+	"game\server\server_offshore.vpc"	[$OFFSHORE]
 }
 
 
@@ -47,4 +49,5 @@ $Project "game_shader"
 	"materialsystem\stdshaders\game_shader_dx9_portal.vpc"	[$PORTAL_TEMPLATE]
 	"materialsystem\stdshaders\game_shader_dx9_portal.vpc"	[$PORTAL]
 	"materialsystem\deferredshaders\game_shader_generic_deferred.vpc"	[$DEFERRED]
+	"materialsystem\deferredshaders\game_shader_generic_deferred.vpc"	[$OFFSHORE]
 }

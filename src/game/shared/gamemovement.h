@@ -21,10 +21,15 @@
 
 #define GAMEMOVEMENT_DUCK_TIME				1000		// ms
 #define GAMEMOVEMENT_JUMP_TIME				510			// ms approx - based on the 21 unit height jump
-#define GAMEMOVEMENT_JUMP_HEIGHT			21.0f		// units
+#define GAMEMOVEMENT_JUMP_HEIGHT			sv_jumpheight.GetFloat()			// 21.0f		// units
 #define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS			( TIME_TO_UNDUCK_MSECS )		// ms
 #define GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS_INV		( GAMEMOVEMENT_DUCK_TIME - GAMEMOVEMENT_TIME_TO_UNDUCK_MSECS )
-
+#ifdef OFFSHORE_DLL
+#define GAMEMOVEMENT_MAX_SLOPE_ANGLE MaxSlopeAngle()
+extern ConVar sv_maxslopeangle;
+#else
+#define GAMEMOVEMENT_MAX_SLOPE_ANGLE 0.7
+#endif
 struct surfacedata_t;
 
 class CBasePlayer;
@@ -88,6 +93,8 @@ protected:
 
 	virtual void	CheckWaterJump(void );
 
+	virtual Vector  GetWishVelocity( Vector &forward, Vector &right );
+
 	virtual void	WaterMove( void );
 
 	virtual void	WaterJump( void );
@@ -107,6 +114,10 @@ protected:
 
 	// Try to keep a walking player on the ground when running down slopes etc
 	virtual void	StayOnGround( void );
+
+#ifdef OFFSHORE_DLL
+	virtual float	MaxSlopeAngle(){ return sv_maxslopeangle.GetFloat(); }
+#endif
 
 	// Handle MOVETYPE_WALK.
 	virtual void	FullWalkMove();
@@ -208,6 +219,7 @@ protected:
 	// Ducking
 	virtual void	Duck( void );
 	virtual void	HandleDuckingSpeedCrop();
+	virtual void	StartDuck(){ };
 	virtual void	FinishUnDuck( void );
 	virtual void	FinishDuck( void );
 	virtual bool	CanUnduck();
