@@ -1034,7 +1034,7 @@ void CSDKPlayer::OnGroundChanged(CBaseEntity *oldGround, CBaseEntity *newGround)
 	else
 		m_PlayerShared.m_iJumpCount = GetClass(this).iJumpCount;
 
-	m_PlayerShared.SetGrappledWall(NULL);
+	m_PlayerShared.SetGrappledWall(NULL, NULL);
 	m_PlayerShared.m_flGrappleTime = -1;
 }
 

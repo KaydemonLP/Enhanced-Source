@@ -292,7 +292,6 @@ public:
 	int				m_nTraceCount;
 };
 
-
 //-----------------------------------------------------------------------------
 // Traces player movement + position
 //-----------------------------------------------------------------------------
@@ -303,6 +302,7 @@ inline void CGameMovement::TracePlayerBBox( const Vector& start, const Vector& e
 
 	Ray_t ray;
 	ray.Init( start, end, GetPlayerMins(), GetPlayerMaxs() );
+
 	ITraceFilter *pFilter = LockTraceFilter( collisionGroup );
 	if ( m_pTraceListData && m_pTraceListData->CanTraceRay(ray) )
 	{
@@ -312,6 +312,11 @@ inline void CGameMovement::TracePlayerBBox( const Vector& start, const Vector& e
 	{
 		enginetrace->TraceRay( ray, fMask, pFilter, &pm );
 	}
+	
+	UnlockTraceFilter( pFilter );
+
+	pFilter = LockTraceFilter( COLLISION_GROUP_NONE );
+
 	UnlockTraceFilter( pFilter );
 }
 

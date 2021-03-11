@@ -50,9 +50,12 @@ public:
 	int			iJumpCount;
 	
 	// Abilities
+	float		flWallClimbTime;
+	float		flWallRunTime;
 	float		flWallJumpTime;
 	float		flSprintMultiplier;
 	bool		bCanSlide;
+	bool		bCanWallRun;
 	
 	// Equipment
 	// TODO: Replace weapon names with a weapon dictionary Index

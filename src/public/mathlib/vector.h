@@ -179,6 +179,10 @@ public:
 		return delta.LengthSqr();
 	}
 
+	// Adding a new Function to a base class? What could go wrong!
+	FORCEINLINE float AngToRad(const Vector &vOther) const;
+	FORCEINLINE float AngTo(const Vector &vOther) const;
+
 	// Copy
 	void	CopyToArray(float* rgfl) const;	
 
@@ -2389,6 +2393,27 @@ inline void AngularImpulseToQAngle( const AngularImpulse &impulse, QAngle &angle
 	angles.y = impulse.z;
 	angles.z = impulse.x;
 }
+
+#ifdef OFFSHORE_DLL
+// Fuck - Kay
+float Vector::AngToRad(const Vector &vOther) const
+{
+	return acos(
+	
+	DotProduct(*this, vOther)
+		/
+	// not using the square function here, maybe i should?
+	(sqrt((x*x)+(y*y)+(z*z)) *
+	sqrt((vOther.x*vOther.x) + (vOther.y*vOther.y) + (vOther.z*vOther.z))));
+}
+
+float Vector::AngTo(const Vector &vOther) const
+{
+	// Doesn't use RAD2DEG because we don't have mathlib Here
+	// Big fucking Pi
+	return ((float)(AngToRad(vOther))* (float)(180.f / (float)3.14159265358979323846));
+}
+#endif
 
 #if !defined( _X360 )
 

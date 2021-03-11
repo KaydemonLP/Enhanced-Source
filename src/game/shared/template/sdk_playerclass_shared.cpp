@@ -6,11 +6,32 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+BEGIN_NETWORK_TABLE_NOBASE( walldata_t, DT_PlayerWallData )
+#if !defined( CLIENT_DLL )
+	SendPropVector( SENDINFO( m_vecGrappledNormal ), -1, SPROP_COORD ),
+	SendPropVector( SENDINFO( m_vecGrapplePos ), -1, SPROP_COORD ),
+	SendPropEHandle( SENDINFO( m_hWallEnt ) ),
+#else
+	RecvPropVector( RECVINFO( m_vecGrappledNormal ) ),
+	RecvPropVector( RECVINFO( m_vecGrapplePos ) ),
+	RecvPropEHandle( RECVINFO( m_hWallEnt ) ),
+#endif
+END_NETWORK_TABLE()
+
+walldata_t::walldata_t()
+{
+	m_vecGrapplePos = vec3_origin;
+	m_vecGrappledNormal = vec3_origin;
+	m_hWallEnt = NULL;
+}
+
 BEGIN_NETWORK_TABLE_NOBASE( CSDKPlayerShared, DT_SDKPlayerShared )
 #if !defined( CLIENT_DLL )
 	SendPropBool( SENDINFO( m_bGrappledWall ) ),
 	SendPropTime( SENDINFO( m_flGrappleTime ) ),
-    SendPropVector( SENDINFO( m_vecGrappledNormal ), -1, SPROP_COORD ),
+	
+	SendPropTime( SENDINFO( m_flWallClimbTime ) ),
+	SendPropTime( SENDINFO( m_flWallRunTime ) ),
 
 	SendPropTime( SENDINFO( m_flLastSprint ) ),
 	SendPropTime( SENDINFO( m_flLastGrounded ) ),
@@ -19,10 +40,13 @@ BEGIN_NETWORK_TABLE_NOBASE( CSDKPlayerShared, DT_SDKPlayerShared )
 	SendPropBool( SENDINFO( m_bSliding ) ),
 	SendPropFloat( SENDINFO( m_flSprintSpeed ) ),
 	SendPropVector( SENDINFO( m_vecSlideDir ), -1, SPROP_COORD ),
+	SendPropDataTable( SENDINFO_DT( m_WallData ), &REFERENCE_SEND_TABLE( DT_PlayerWallData ) ),
 #else
 	RecvPropBool( RECVINFO( m_bGrappledWall ) ),
 	RecvPropTime( RECVINFO( m_flGrappleTime ) ),
-    RecvPropVector( RECVINFO( m_vecGrappledNormal ) ),
+	
+	RecvPropTime( RECVINFO( m_flWallClimbTime ) ),
+	RecvPropTime( RECVINFO( m_flWallRunTime ) ),
 
 	RecvPropTime( RECVINFO( m_flLastSprint ) ),
 	RecvPropTime( RECVINFO( m_flLastGrounded ) ),
@@ -31,6 +55,7 @@ BEGIN_NETWORK_TABLE_NOBASE( CSDKPlayerShared, DT_SDKPlayerShared )
 	RecvPropBool( RECVINFO( m_bSliding ) ),
 	RecvPropFloat( RECVINFO( m_flSprintSpeed ) ),
 	RecvPropVector( RECVINFO( m_vecSlideDir ) ),
+	RecvPropDataTable( RECVINFO_DT( m_WallData ), 0, &REFERENCE_RECV_TABLE( DT_PlayerWallData ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -65,15 +90,33 @@ CSDKPlayerShared::~CSDKPlayerShared()
 	
 }
 
+void CSDKPlayerShared::OnHitWall( trace_t *trTrace )
+{
+	if( 
+		m_pOuter->GetGroundEntity() == NULL 
+		&& ( GetClass( m_pOuter ).flWallJumpTime > 0
+		|| GetClass( m_pOuter ).flWallClimbTime > 0 
+		|| GetClass( m_pOuter ).flWallRunTime > 0 )
+//		&& trTrace->m_pEnt->IsWorld()
+	)
+	{
+		SetGrappledWall( &trTrace->plane.normal, &trTrace->endpos, trTrace->m_pEnt && !trTrace->m_pEnt->IsWorld() ? trTrace->m_pEnt : NULL );
+
+		if( m_flGrappleTime == -1 )
+			m_flGrappleTime = gpGlobals->curtime;
+	}
+}
+
 float CSDKPlayerShared::GetWallJumpTime()
 {
 	return GetClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flWallJumpTime;
 }
 
-void CSDKPlayerShared::SetGrappledWall(Vector *vecNormal)
+void CSDKPlayerShared::SetGrappledWall( Vector *vecNormal, Vector *vecPos, CBaseEntity *pEnt )
 {
-	if( GetWallJumpTime() && vecNormal )
+	if( vecNormal )
 	{
+		/*
 		QAngle punchAng;
 
 		punchAng.x = random->RandomFloat( -0.5f, 0.5f );
@@ -81,13 +124,22 @@ void CSDKPlayerShared::SetGrappledWall(Vector *vecNormal)
 		punchAng.z = 0.0f;
 		
 		m_pOuter->ViewPunch( punchAng );
-
-		m_vecGrappledNormal = *vecNormal;
+		*/
+		// We're grappling!
 		m_bGrappledWall = true;
-		m_iJumpCount++;
+		// Always allow for jumps after grapple
+		// m_iJumpCount++;
 	}
 	else
 		m_bGrappledWall = false;
+
+	m_WallData.m_hWallEnt = pEnt;
+
+	if( vecPos )
+		m_WallData.m_vecGrapplePos = *vecPos;
+
+	if( vecNormal )
+		m_WallData.m_vecGrappledNormal = *vecNormal;
 }
 
 float CSDKPlayerShared::GetSpeedMultiplier()
@@ -199,4 +251,13 @@ void CSDKPlayer::SetStepSoundTime(stepsoundtimes_t iStepSoundTime, bool bWalking
 	{
 		m_flStepSoundTime *= 1.33333333f;
 	}
+}
+
+// Shared Functions
+const QAngle &CSDKPlayer::EyeAngles(void)
+{
+	if( m_PlayerShared.GrappledWall() && m_PlayerShared.m_WallData.m_hWallEnt )
+		return pl.v_angle;
+
+	return BaseClass::EyeAngles();
 }

@@ -62,6 +62,9 @@ public:
 	virtual void	SetStepSoundTime(stepsoundtimes_t iStepSoundTime, bool bWalking);
 
 	virtual int 	GetClassNumber() { return m_iClassNumber; }
+
+	// Shared Functions
+	virtual const QAngle &EyeAngles();
 public:
 	void FireBullet( 
 		Vector vecSrc, 

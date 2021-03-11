@@ -228,6 +228,9 @@ public:
 
 	Class_T Classify ( void );
 
+	// Shared Functions
+	virtual const QAngle &EyeAngles();
+
 public:
 	void FireBullet( 
 		Vector vecSrc, 

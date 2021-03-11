@@ -16,7 +16,13 @@
 	#include "hl_movedata.h"
 #endif
 
-
+#ifdef OFFSHORE_DLL
+	#ifdef CLIENT_DLL
+		#include "c_sdk_player.h"
+	#else
+		#include "sdk_player.h"
+	#endif
+#endif
 
 #if (PREDICTION_ERROR_CHECK_LEVEL > 0) && (PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0)
 #include "tier0/stacktools.h"
@@ -2200,6 +2206,16 @@ void CGameMovement::WalkMove( void )
 	Accelerate ( wishdir, wishspeed, sv_accelerate.GetFloat() );
 	mv->m_vecVelocity[2] = 0;
 
+#ifdef OFFSHORE_DLL
+	// Clamp the speed so we don't have the weird faster side and wall movement
+	float flCurrentVelocity = VectorLength( mv->m_vecVelocity );
+	if ( flCurrentVelocity > mv->m_flMaxSpeed )
+	{
+		float flScale = mv->m_flMaxSpeed / flCurrentVelocity;
+		mv->m_vecVelocity.x *= flScale;
+		mv->m_vecVelocity.y *= flScale;
+	}
+#endif
 	// Add in any base velocity to the current velocity.
 	VectorAdd (mv->m_vecVelocity, player->GetBaseVelocity(), mv->m_vecVelocity );
 
@@ -2941,6 +2957,9 @@ int CGameMovement::TryPlayerMove( Vector *pFirstDest, trace_t *pFirstTrace )
 		if (!pm.plane.normal[2])
 		{
 			blocked |= 2;		// step / wall
+#ifdef OFFSHORE_DLL
+			ToSDKPlayer(player)->m_PlayerShared.OnHitWall(&pm);
+#endif
 		}
 
 		// Reduce amount of m_flFrameTime left by total time left * fraction
@@ -4888,7 +4907,7 @@ void CGameMovement::PlayerMove( void )
 	}
 
 	// Handle movement modes.
-	switch (player->GetMoveType())
+	switch( player->GetMoveType() )
 	{
 		case MOVETYPE_NONE:
 			break;
@@ -4919,7 +4938,12 @@ void CGameMovement::PlayerMove( void )
 		case MOVETYPE_OBSERVER:
 			FullObserverMove(); // clips against world&players
 			break;
-
+#ifdef OFFSHORE_DLL
+			// OFFSHORE has a few new move styles that can't be put inside the rest ( ie. Wallrunning )
+			// So we define that as movetype custom, however that's checked in our own gamemovement class, so just skip here
+		case MOVETYPE_CUSTOM:
+			break;
+#endif
 		default:
 			DevMsg( 1, "Bogus pmove player movetype %i on (%i) 0=cl 1=sv\n", player->GetMoveType(), player->IsServer());
 			break;

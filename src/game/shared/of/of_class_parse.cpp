@@ -27,6 +27,7 @@ ClassInfo_t::ClassInfo_t()
 	flEyeHeight = 72.0f;
 	
 	flWallJumpTime = 0.0f;
+	flWallClimbTime = 0.0f;
 
 	iWeaponCount = 0;
 }
@@ -59,7 +60,9 @@ void ClassInfo_t::Parse( KeyValues *pKeyValuesData )
 
 	// Abilities
 	flWallJumpTime = pKeyValuesData->GetFloat( "wall_jump_time", 0.0f );
-	flSprintMultiplier = pKeyValuesData->GetFloat("sprint_multiplier", 1.0f);
+	flWallClimbTime = pKeyValuesData->GetFloat( "wall_climb_time", 0.0f );
+	flWallRunTime = pKeyValuesData->GetFloat( "wall_run_time", 0.0f );
+	flSprintMultiplier = pKeyValuesData->GetFloat( "sprint_multiplier", 1.0f );
 
 	// Equipment
 
@@ -72,7 +75,7 @@ void ClassInfo_t::Parse( KeyValues *pKeyValuesData )
 		{
 			const char *szTempName = kvValue->GetString();
 			m_hWeaponNames[iWeaponCount] = new char[strlen(szTempName)];
-			Q_strncpy(m_hWeaponNames[iWeaponCount], szTempName, strlen(szTempName) + 1); // For some reason strlen gets 1 less than it should???
+			Q_strncpy( m_hWeaponNames[iWeaponCount], szTempName, strlen(szTempName) + 1 ); // For some reason strlen gets 1 less than it should???
 			iWeaponCount++;
 		}
 	}
