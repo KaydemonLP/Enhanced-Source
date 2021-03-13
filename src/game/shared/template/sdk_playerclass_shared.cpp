@@ -101,9 +101,6 @@ void CSDKPlayerShared::OnHitWall( trace_t *trTrace )
 	)
 	{
 		SetGrappledWall( &trTrace->plane.normal, &trTrace->endpos, trTrace->m_pEnt && !trTrace->m_pEnt->IsWorld() ? trTrace->m_pEnt : NULL );
-
-		if( m_flGrappleTime == -1 )
-			m_flGrappleTime = gpGlobals->curtime;
 	}
 }
 
@@ -127,11 +124,22 @@ void CSDKPlayerShared::SetGrappledWall( Vector *vecNormal, Vector *vecPos, CBase
 		*/
 		// We're grappling!
 		m_bGrappledWall = true;
-		// Always allow for jumps after grapple
-		// m_iJumpCount++;
+
+		// Should probably make a "OnStartGrapple" function here later if needed
+		if( m_flGrappleTime == -1 )
+		{
+			m_flGrappleTime = gpGlobals->curtime;
+
+			// Always allow for jumps after grapple
+			m_iJumpCount++;
+		}
+		
 	}
 	else
+	{
 		m_bGrappledWall = false;
+		m_flGrappleTime = -1;
+	}
 
 	m_WallData.m_hWallEnt = pEnt;
 

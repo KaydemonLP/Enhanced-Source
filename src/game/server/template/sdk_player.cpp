@@ -1028,7 +1028,6 @@ void CSDKPlayer::OnGroundChanged(CBaseEntity *oldGround, CBaseEntity *newGround)
 	
 	if( oldGround && !newGround )
 	{
-		DevWarning("Left the ground\n");
 		m_PlayerShared.m_flLastGrounded = gpGlobals->curtime;
 	}
 	else

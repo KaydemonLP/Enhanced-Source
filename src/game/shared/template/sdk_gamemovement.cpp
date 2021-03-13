@@ -5,8 +5,6 @@
 #include "of_shared_schemas.h"
 #include "coordsize.h"
 
-#define PI 3.14159265359
-
 #ifdef GAME_DLL
 //-----------------------------------------------------------------------------
 // Purpose: Interpolate Euler angles using quaternions to avoid singularities
@@ -159,22 +157,7 @@ void COFGameMovement::PlayerMove( void )
 
 int COFGameMovement::TryPlayerMove( Vector *pFirstDest, trace_t *pFirstTrace )
 {
-	int iBlocker = BaseClass::TryPlayerMove( pFirstDest, pFirstTrace );
-	/*
-	// Get our target move direction and slightly move towards it
-	// If there's a wall we can grapple onto, check it
-	Vector forward, right, up;
-
-	AngleVectors (mv->m_vecViewAngles, &forward, &right, &up);  // Determine movement angles
-	Vector vecEnd = GetWishVelocity(forward,right);
-	VectorNormalize(vecEnd);
-	vecEnd = mv->GetAbsOrigin() + vecEnd;
-
-#ifdef OFFSHORE_DLL
-	ToSDKPlayer(player)->m_PlayerShared.OnHitWall(&pm);
-#endif
-	*/
-	return iBlocker;
+	return BaseClass::TryPlayerMove(pFirstDest, pFirstTrace);
 }
 
 void COFGameMovement::ReduceTimers(void)
@@ -241,8 +224,11 @@ void COFGameMovement::WallMove( void )
 	if( mv->m_nButtons & IN_JUMP )
 	{
 		// Ignore the rest if we jumped
- 		if( CheckJumpButton() )
-			bUsedWallMove = true;
+		bool bJumped = CheckJumpButton();
+
+		bUsedWallMove |= bJumped;
+		bEndGrapple |= bJumped;
+
 	}
 	else
 	{
@@ -256,7 +242,7 @@ void COFGameMovement::WallMove( void )
 	Vector vecWishVel = GetWishVelocity( forward, right );
 
 	// We can wall climb and have time
-	if( GetClass(m_pOFPlayer).flWallClimbTime 	// And we're facing the wall directly
+	if( !bUsedWallMove && GetClass(m_pOFPlayer).flWallClimbTime 	// And we're facing the wall directly
 		&& vecWishVel.Length() && forward.AngTo(m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrappledNormal) > 125)
 	{
 		bUsedWallMove = true;
@@ -284,32 +270,23 @@ void COFGameMovement::WallMove( void )
 		// If we made it all the way, then copy trace end as new player position.
 		mv->m_outWishVel += VectorNormalize(vecWishClimb) * vecWishClimb.Length();
 
-		NDebugOverlay::Sphere(pm.endpos, 10, 255, 0, 0, true, gpGlobals->frametime);
-
 		mv->SetAbsOrigin( pm.endpos );
 		m_pOFPlayer->SetAbsOrigin( pm.endpos );
 
 		// Reset grapple time
-		m_pOFPlayer->m_PlayerShared.m_flGrappleTime = gpGlobals->curtime;
+		if( m_pOFPlayer->m_PlayerShared.m_flGrappleTime )
+			m_pOFPlayer->m_PlayerShared.m_flGrappleTime = gpGlobals->curtime;
 	}
-	else if( GetClass(m_pOFPlayer).flWallRunTime 	// And we're not facing the wall directly
+	else if( !bUsedWallMove && GetClass(m_pOFPlayer).flWallRunTime 	// And we're not facing the wall directly
 		&& vecWishVel.Length() )
 	{
 		bUsedWallMove = true;
 
 		// Don't move down while wall running
-		if( mv->m_vecVelocity[0] || mv->m_vecVelocity[1] )
-		{
-			mv->m_vecVelocity[2] = 0;
-		}
+		mv->m_vecVelocity[2] *= !!mv->m_vecVelocity[0];
 
-		
-
-		Vector vecWishRun = RotateVectorTowardsVector(m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrappledNormal, forward*Vector(1,1,0), PI/2);
+		Vector vecWishRun = RotateVectorTowardsVector(m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrappledNormal, forward*Vector(1,1,0), M_PI/2);
 		VectorNormalize(vecWishRun);
-		NDebugOverlay::Line(m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrapplePos,
-			m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrapplePos + (vecWishRun * 10),
-			0, 255, 0, false, gpGlobals->frametime);
 
 		vecWishRun *= 400;
 
@@ -326,20 +303,15 @@ void COFGameMovement::WallMove( void )
 		// If we made it all the way, then copy trace end as new player position.
 		mv->m_outWishVel += VectorNormalize(vecWishRun) * vecWishRun.Length();
 
-		NDebugOverlay::Sphere(dest, 10, 255, 0, 0, true, gpGlobals->frametime);
-
-		NDebugOverlay::Line(m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrapplePos,
-			m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrapplePos + (m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrappledNormal * 10),
-			0, 0, 255, false, gpGlobals->frametime);
-
 		mv->SetAbsOrigin( pm.endpos );
 		m_pOFPlayer->SetAbsOrigin( pm.endpos );
 
 		// Reset grapple time
-		m_pOFPlayer->m_PlayerShared.m_flGrappleTime = gpGlobals->curtime;
+		if( m_pOFPlayer->m_PlayerShared.m_flGrappleTime )
+			m_pOFPlayer->m_PlayerShared.m_flGrappleTime = gpGlobals->curtime;
 	}
 
-	bEndGrapple |= m_pOFPlayer->m_PlayerShared.GetWallJumpTime() && gpGlobals->curtime - m_pOFPlayer->m_PlayerShared.m_flGrappleTime > m_pOFPlayer->m_PlayerShared.GetWallJumpTime();
+	bEndGrapple |= (!bUsedWallMove || m_pOFPlayer->m_PlayerShared.GetWallJumpTime()) && gpGlobals->curtime - m_pOFPlayer->m_PlayerShared.m_flGrappleTime > m_pOFPlayer->m_PlayerShared.GetWallJumpTime();
 
 	bEndGrapple |= !StayOnWall();
 
@@ -372,44 +344,30 @@ void COFGameMovement::WallMove( void )
 	}
 	return;
 	/*
-	Damn shawty this was useless :trolflace:
-
-	Vector wishdir;
-	Vector forward, right, up;
-	AngleVectors (mv->m_vecViewAngles, &forward, &right, &up);  // Determine movement angles
-
-
-	// Add in any base velocity to the current velocity.
-	VectorAdd (mv->m_vecVelocity, player->GetBaseVelocity(), mv->m_vecVelocity );
-
-	float spd = VectorLength( mv->m_vecVelocity );
-
-	if ( spd < 1.0f )
-	{
-		mv->m_vecVelocity.Init();
-		// Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-		VectorSubtract( mv->m_vecVelocity, player->GetBaseVelocity(), mv->m_vecVelocity );
-		return;
-	}
-
-	player->m_surfaceFriction = 1000;
-
-	Friction();
-
-	Vector dest;
-
-	// first try just moving to the destination	
-	dest[0] = mv->GetAbsOrigin()[0] + mv->m_vecVelocity[0]*gpGlobals->frametime;
-	dest[1] = mv->GetAbsOrigin()[1] + mv->m_vecVelocity[1]*gpGlobals->frametime;	
-	dest[2] = mv->GetAbsOrigin()[2];
-
-	// If we made it all the way, then copy trace end as new player position.
-	mv->m_outWishVel += wishdir * wishspeed;
-
-	// Now pull the base velocity back out.   Base velocity is set if you are on a moving object, like a conveyor (or maybe another monster?)
-	VectorSubtract( mv->m_vecVelocity, player->GetBaseVelocity(), mv->m_vecVelocity );
+		Demo,,,.man..
+													  ,##                                                                   
+											  #*####%%%%&%,,,/                                                              
+											##%%%&%%%%%%@&#*****,,                         *(*         (###%                
+										   &&%%%%&@&&&%&&#######(//,%(,**%%####(((////*,,*%%##%%%#% #&&&&&&&%%%             
+											&&#%%&&&&&#&&%#####(####%&(%##&####%%%#((((##%%%@@@&&&* /&&&&&&&&&&#%            
+											 &%&%&&%&&&##%%########%&&#&&&&&&&&&&&&&%*##((#@@@@@&@@@&&&%&##(%%*@@*          
+											  &&&&&&&%%%&%%##########&&&&&&&&&&&&%*,(#&&%%#,,*&&@@@@@@@@%%%%##%%@@*         
+											 &&&&&&&&&&&%&&&%%###/@&&&&&&@&&&&@* /*&%%#/#&%#%&&&@@@@@@@&&&&&%%&@@@/%//%      
+											&&&&&&&&&&&&&&&&&&*&&&&&&&&&&&&   #%##(#&%#* /#%&&&&&%@@@@@@&&%%%&@@@@@&(@&%(#   
+												@@@@@&&&   &&%@&&&&&&&&&#######&&%##*%%&&&&&&&&%&&&%%@@@@&%%@@@@@@@&%###@&&&
+												@@@@@&&      &&&&&&&#######%%%%%&&#%&&&&&&&&&&&&&#&&&&%%@@@@@@@@@&%%%&@%%&&&
+												@@@@&&       %%&&&&&@#######%%###%&&&@&@@@&&&&&&&&&(&&&&//(/@@@&&%%&&%%%%%  
+											   (@@&&&&        *@@&&&&@#############%@@@@@&&&&&&&&&&&&(&&&#((%%&&&@&%%%%%%%  
+											  .%%%%%%%(        &&@@&&&&##%####%%%%%##&&&&&&&&&&&&&&//%(@@&&&%%%%&%#//(((#%  
+											  #%%%%%%%(      /%&&&&&@@&%##%###%%%%%#(#&&&&&&&&%/(@&#%#%%&@@&&%%%((***##(/#  
+											(####%%################&&&&@########%%%%(((&&&&&(%&(/%%@&&&%%%%@@###((/,#/(/(   
+								 ((%%%###(/&%%%%%%%%###############%&&@&@###&@@@@@@@@@@@@@@@@@&&&#%&&@&&%%#@%%#(((#######   
+			   #/#(/%          #&&%%&&&&&&&&&%%%%%%%%##########%%&&&&&&@@@&&&&@@%%#%%@@@@@@@@@@@&&&%%*@@@@#(((((((#%%%%%%   
+	 %#&&%%%%%%&%%%%%%%%%%%(#&&&&&%%%&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&#(#(&&@&@@@@%%#,,,,,,,,,,,,,,,,,&&###((###    
+	%%&&&@@@@@@&&&&&&&&&&&@@@@@@&&&&%%&&&&&&&&&&&&&&&((((           @@&&&&@&####%%&&@@%#####%&%*,(,,,,,,,,,,,,,,*&&%%%%,    
+	&&@@@@@@@@@@&&&&&&&@&&&&     *&&&&&&&&&&                       @@&@@@&##(#%%&&@&&%%%%%%&&&&&##################&&&&%     
+	  &@@(                          %&#                            &@%%%####%%&&@@@&%%%%%%%&&&&&%#################%&&&      
 	*/
-	// StayOnGround(); turn into StayOnWall();
 }
 
 bool COFGameMovement::StayOnWall( void )
@@ -421,8 +379,7 @@ bool COFGameMovement::StayOnWall( void )
 		(-1 * m_pOFPlayer->m_PlayerShared.m_WallData.m_vecGrappledNormal * (player->GetStepSize() + GetPlayerMaxs().AsVector2D().DistTo(GetPlayerMins().AsVector2D()))),
 		PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, pm);
 
-	if( pm.fraction > 0.0f &&	// must go somewhere
-		pm.fraction < 1.0f &&	// must hit something
+	if( pm.fraction < 1.0f &&	// must hit something
 		!pm.startsolid 			// can't be embedded in a solid
 	)
 	{
@@ -434,7 +391,7 @@ bool COFGameMovement::StayOnWall( void )
 		return true;
 	}
 
-	return false;
+	return false || pm.DidHit();
 }
 
 //-----------------------------------------------------------------------------
@@ -480,8 +437,8 @@ bool COFGameMovement::CheckJumpButton( void )
 		return false;
 	}
 
-	bool bWasGrounded = !!player->GetGroundEntity();
-
+	bool bUsedKayoteTime = gpGlobals->curtime - m_pOFPlayer->m_PlayerShared.m_flLastGrounded < sv_kayotetime.GetFloat();
+	bool bWasGrounded = !!player->GetGroundEntity() || bUsedKayoteTime;
 	// No more effect
  	if( m_pOFPlayer->m_PlayerShared.m_iJumpCount <= 0 )
 	{
@@ -514,8 +471,13 @@ bool COFGameMovement::CheckJumpButton( void )
 
 	m_pOFPlayer->m_PlayerShared.SetSliding( false );
 	
-	player->PlayStepSound( (Vector &)mv->GetAbsOrigin(), player->m_pSurfaceData, 1.0, true );
-	
+	if( bWasGrounded )
+	{
+		player->PlayStepSound( (Vector &)mv->GetAbsOrigin(), player->m_pSurfaceData, 1.0, true );
+
+		// Jumping instantly removes your kayote time privelages
+		m_pOFPlayer->m_PlayerShared.m_flLastGrounded -= sv_kayotetime.GetFloat();
+	}
 	MoveHelper()->PlayerSetAnimation( PLAYER_JUMP );
 
 	float flGroundFactor = 1.0f;
@@ -543,7 +505,7 @@ bool COFGameMovement::CheckJumpButton( void )
 	// Acclerate upward
 	// If we are ducking or we werent grounded, stop our velocity first
 	float startz = mv->m_vecVelocity[2];
-	if ( (  player->m_Local.m_bDucking ) || (  player->GetFlags() & FL_DUCKING ) || !bWasGrounded )
+	if ( (  player->m_Local.m_bDucking ) || (  player->GetFlags() & FL_DUCKING ) || (bWasGrounded && bUsedKayoteTime) )
 	{
 		// d = 0.5 * g * t^2		- distance traveled with linear accel
 		// t = sqrt(2.0 * 45 / g)	- how long to fall 45 units
@@ -612,8 +574,27 @@ bool COFGameMovement::CheckJumpButton( void )
 		//Lounge!
 		mv->m_vecVelocity += vecDir * lungeSpeed;
 
-		m_pOFPlayer->m_PlayerShared.m_flGrappleTime = -1;
 		m_pOFPlayer->m_PlayerShared.SetGrappledWall(NULL, NULL);
+	}
+	else if( !bWasGrounded )
+	{
+		QAngle angEyes = player->EyeAngles();
+
+		Vector forward, right, up;
+		AngleVectors(angEyes, &forward, &right, &up);
+		Vector vecWishVel = GetWishVelocity(forward, right);
+
+		// If we're already moving fast in a certain direction
+		// allow us to transfer that velocity to our desired direction
+		if( mv->m_vecVelocity.AsVector2D().Length() <= 0 &&
+			vecWishVel.AsVector2D().Length() < mv->m_vecVelocity.AsVector2D().Length() )
+		{
+			VectorNormalize(vecWishVel);
+			vecWishVel *= mv->m_vecVelocity.AsVector2D().Length();
+		}
+
+		mv->m_vecVelocity[0] = vecWishVel[0];
+		mv->m_vecVelocity[1] = vecWishVel[1];
 	}
 
 	FinishGravity();
@@ -623,16 +604,8 @@ bool COFGameMovement::CheckJumpButton( void )
 	mv->m_outJumpVel.z += mv->m_vecVelocity[2] - startz;
 	mv->m_outStepHeight += 0.15f;
 
-
-	bool bSetDuckJump = (gpGlobals->maxClients == 1); //most games we only set duck jump if the game is single player
-
-
-	// Set jump time.
-	if ( bSetDuckJump )
-	{
-		player->m_Local.m_nJumpTimeMsecs = GAMEMOVEMENT_JUMP_TIME;
-		player->m_Local.m_bInDuckJump = true;
-	}
+	player->m_Local.m_nJumpTimeMsecs = GAMEMOVEMENT_JUMP_TIME;
+	player->m_Local.m_bInDuckJump = true;
 
 #if defined( HL2_DLL )
 
@@ -740,7 +713,6 @@ void COFGameMovement::CheckParameters(void)
 		wishdir[2] = 0;             // Zero out z part of velocity
 
 		VectorNormalize(wishdir);
-
 	}
 
 	BaseClass::CheckParameters();
@@ -749,6 +721,9 @@ void COFGameMovement::CheckParameters(void)
 	{
 		if( mv->m_flForwardMove != 0 || mv->m_flSideMove != 0 )
 		{
+			m_pOFPlayer->m_PlayerShared.m_vecSlideDir = RotateVectorTowardsVector(
+				m_pOFPlayer->m_PlayerShared.m_vecSlideDir, wishdir, gpGlobals->frametime * DEG2RAD(sv_slideturnspeed.GetFloat()));
+			/*
 			QAngle angSlide, angWish;
 			VectorAngles(m_pOFPlayer->m_PlayerShared.m_vecSlideDir, angSlide);
 			VectorAngles(wishdir, angWish);
@@ -756,23 +731,18 @@ void COFGameMovement::CheckParameters(void)
 			float flTargetAng = angWish.y;
 
 			if( FloatMakePositive( angSlide.y - angWish.y ) > 180 )
-			{
 				flTargetAng = angWish.y > angSlide.y ? angSlide.y - 360 : angSlide.y + 360;
-			}
 
 			if( flTargetAng > angSlide.y )
-			{
 				angSlide.y = MIN(flTargetAng, angSlide.y + (gpGlobals->frametime * sv_slideturnspeed.GetFloat()));
-			}
 			else
-			{
 				angSlide.y = MAX(flTargetAng, angSlide.y - (gpGlobals->frametime * sv_slideturnspeed.GetFloat()));
-			}
 
 			if( angSlide.y >= 360 )
 				angSlide.y -= 360;
 
 			AngleVectors(angSlide, &m_pOFPlayer->m_PlayerShared.m_vecSlideDir.GetForModify());
+			*/
 		}
 		if (mv->m_vecVelocity.Length() < m_pOFPlayer->GetPlayerMaxSpeed() * 0.33333333f)
 			m_pOFPlayer->m_PlayerShared.SetSliding( false );
