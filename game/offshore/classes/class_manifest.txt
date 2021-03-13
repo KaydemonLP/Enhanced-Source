@@ -1,0 +1,5 @@
+"ClassFiles"
+{
+	"File"		"classes/surplex.txt"
+	"File"		"classes/quaker.txt"
+}

@@ -1,0 +1,29 @@
+"Surplex"
+{
+	"classname"				"surplex"
+	"classname_localized"	"OF_CLASS_SURPLEX"
+
+	"RightArm"	"models/arms/surplex/v_right_arm.mdl"
+	"LeftArm"	"models/arms/surplex/v_left_arm.mdl"
+	
+	// "playermodel"	"models/player/surplex.mdl"
+	"playermodel"	"models/player/blue_player.mdl"
+
+	"step_speed"	"0.35"
+
+	"health"		"200"
+
+	"speed"			"300"
+	"eye_height"	"72"
+	
+	"sprint_multiplier"	"1.25"
+	
+	"wall_climb_time"	"10"
+	"wall_run_time"		"10"
+	
+	"Weapons"
+	{
+		"Weapon"	"weapon_crowbar"
+	}
+
+}
