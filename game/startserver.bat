@@ -1,0 +1,1 @@
+srcds.exe -game "offshore" -console +internet +map test -maxplayers 24
