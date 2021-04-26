@@ -34,6 +34,8 @@
 #include "of_class_parse.h"
 #include "sdk_gamerules_sp.h"
 #include "sdk_player_shared.h"
+#include "of_playeranimstate.h"
+#include "bone_setup.h" //animstate implementation
 
 #include "bots\bot.h"
 
@@ -58,10 +60,23 @@ ConVar sv_regeneration_wait_time ("sv_regeneration_wait_time", "1.0", FCVAR_REPL
 LINK_ENTITY_TO_CLASS( player, CSDKPlayer );
 
 IMPLEMENT_SERVERCLASS_ST (CSDKPlayer, DT_SDKPlayer) 
-	SendPropBool( SENDINFO(m_bPlayerPickedUpObject) ),
+	SendPropBool( SENDINFO( m_bPlayerPickedUpObject ) ),
 	SendPropInt( SENDINFO( m_iShotsFired ), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iClassNumber ) ),
 	SendPropDataTable( SENDINFO_DT( m_PlayerShared ), &REFERENCE_SEND_TABLE( DT_SDKPlayerShared ) ),
+	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 0 ), 11, SPROP_CHANGES_OFTEN ),
+	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 1 ), 11, SPROP_CHANGES_OFTEN ),
+	SendPropEHandle( SENDINFO( m_hRagdoll ) ),
+
+	SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
+	SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),	
+	SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),
+	SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
+	SendPropExclude( "DT_BaseAnimatingOverlay", "overlay_vars" ),
+	
+	// playeranimstate and clientside animation takes care of these on the client
+	SendPropExclude( "DT_ServerAnimationData" , "m_flCycle" ),	
+	SendPropExclude( "DT_AnimTimeMustBeFirst" , "m_flAnimTime" ),
 END_SEND_TABLE()
 
 BEGIN_DATADESC( CSDKPlayer )
@@ -72,10 +87,61 @@ BEGIN_DATADESC( CSDKPlayer )
 	DEFINE_FIELD( m_nNumMissPositions, FIELD_INTEGER ),
 
 //#ifdef PLAYER_HEALTH_REGEN
-	DEFINE_FIELD( m_fTimeLastHurt, FIELD_TIME )
+	DEFINE_FIELD( m_fTimeLastHurt, FIELD_TIME ),
 //#endif
 
+	DEFINE_FIELD( m_angEyeAngles, FIELD_VECTOR )
+
 END_DATADESC()
+
+
+class CSDKRagdoll : public CBaseAnimatingOverlay
+{
+public:
+	DECLARE_CLASS( CSDKRagdoll, CBaseAnimatingOverlay );
+	DECLARE_SERVERCLASS();
+
+	// Transmit ragdolls to everyone.
+	virtual int UpdateTransmitState()
+	{
+		return SetTransmitState( FL_EDICT_ALWAYS );
+	}
+
+public:
+	// In case the client has the player entity, we transmit the player index.
+	// In case the client doesn't have it, we transmit the player's model index, origin, and angles
+	// so they can create a ragdoll in the right place.
+	CNetworkHandle( CBaseEntity, m_hPlayer );	// networked entity handle 
+	CNetworkVector( m_vecRagdollVelocity );
+	CNetworkVector( m_vecRagdollOrigin );
+};
+
+LINK_ENTITY_TO_CLASS( sdk_ragdoll, CSDKRagdoll );
+
+IMPLEMENT_SERVERCLASS_ST_NOBASE( CSDKRagdoll, DT_SDKRagdoll )
+	SendPropVector		( SENDINFO( m_vecRagdollOrigin ), -1,  SPROP_COORD ),
+	SendPropEHandle		( SENDINFO( m_hPlayer ) ),
+	SendPropModelIndex	( SENDINFO( m_nModelIndex ) ),
+	SendPropInt			( SENDINFO( m_nForceBone ), 8, 0 ),
+	SendPropVector		( SENDINFO( m_vecForce ), -1, SPROP_NOSCALE ),
+	SendPropVector		( SENDINFO( m_vecRagdollVelocity ) )
+END_SEND_TABLE()
+
+
+// -------------------------------------------------------------------------------- //
+
+void cc_CreatePredictionError_f()
+{
+	CBaseEntity *pEnt = CBaseEntity::Instance( 1 );
+	pEnt->SetAbsOrigin( pEnt->GetAbsOrigin() + Vector( 63, 0, 0 ) );
+}
+
+ConCommand cc_CreatePredictionError( "CreatePredictionError", cc_CreatePredictionError_f, "Create a prediction error", FCVAR_CHEAT );
+
+static bool BucketSlotCompare( CBucketIndex const &lhs, CBucketIndex const &rhs )
+{
+	return ( lhs < rhs );
+}
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -84,6 +150,12 @@ END_DATADESC()
 //-----------------------
 CSDKPlayer::CSDKPlayer()
 {
+	m_PlayerAnimState =  CreatePlayerAnimState( this, this, LEGANIM_9WAY, true );
+	UseClientSideAnimation();
+	m_angEyeAngles.Init();
+
+	SetViewOffset( Vector(0,0,0) );
+
 	m_nNumMissPositions = 0;
 
 	// Set up the hints.
@@ -101,6 +173,7 @@ CSDKPlayer::CSDKPlayer()
 	m_iClassNumber = 0;
 	
 	m_PlayerShared.m_pOuter = this;
+	m_hWeaponSlots.SetLessFunc( BucketSlotCompare );
 }
 
 CSDKPlayer::~CSDKPlayer()
@@ -109,7 +182,9 @@ CSDKPlayer::~CSDKPlayer()
 	m_pHintMessageQueue = NULL;
 
 	m_flNextMouseoverUpdate = gpGlobals->curtime;
-
+	
+	if( m_PlayerAnimState )
+		m_PlayerAnimState->Release();
 }
 
 void CSDKPlayer::Precache( void )
@@ -151,6 +226,8 @@ void CSDKPlayer::Spawn()
 {
 	// Dying without a player model crashes the client so set it instantly
 	SetModel( GetClass(this).szPlayerModel );
+
+	m_hRagdoll = NULL;
 
 	BaseClass::Spawn();
 
@@ -219,11 +296,15 @@ void CSDKPlayer::PreThink()
 void CSDKPlayer::PostThink()
 {
 	BaseClass::PostThink();
-
-	// Keep the model upright; pose params will handle pitch aiming.
+	
 	QAngle angles = GetLocalAngles();
 	angles[PITCH] = 0;
 	SetLocalAngles(angles);
+
+	// Store the eye angles pitch so the client can compute its animation state correctly.
+	m_angEyeAngles = EyeAngles();
+
+	m_PlayerAnimState->Update(m_angEyeAngles[YAW], m_angEyeAngles[PITCH]);
 
 	if ( m_flNextMouseoverUpdate < gpGlobals->curtime )
 	{
@@ -316,7 +397,20 @@ void CSDKPlayer::Splash( void )
 //-----------------------------------------------------------------------------
 void CSDKPlayer::UpdateClientData( void )
 {
+#ifdef OFFSHORE_DLL
+	bool bEqDmgTypes = m_hHUDDamage.Count() == m_hDamageType.Count();
+	for( int i = 0; bEqDmgTypes && i < m_hHUDDamage.Count(); i++ )
+	{
+		if( !m_hDamageType.HasElement(m_hHUDDamage[i]) )
+		{
+			bEqDmgTypes = false;
+			break;
+		}
+	}
+	if ( m_DmgTake || m_DmgSave || bEqDmgTypes )
+#else
 	if (m_DmgTake || m_DmgSave || m_bitsHUDDamage != m_bitsDamageType)
+#endif
 	{
 		// Comes from inside me if not set
 		Vector damageOrigin = GetLocalOrigin();
@@ -325,8 +419,18 @@ void CSDKPlayer::UpdateClientData( void )
 		damageOrigin = m_DmgOrigin;
 
 		// only send down damage type that have hud art
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hShowHudDamage; g_pGameRules->Damage_GetShowOnHud(&hShowHudDamage);
+		CUtlVector<int> hVisibleDamageBits;
+		FOR_EACH_VEC(hShowHudDamage, i)
+		{
+			if( m_hDamageType.HasElement(hShowHudDamage[i]) )
+				hVisibleDamageBits.AddToTail(hShowHudDamage[i]);
+		}
+#else
 		int iShowHudDamage = g_pGameRules->Damage_GetShowOnHud();
 		int visibleDamageBits = m_bitsDamageType & iShowHudDamage;
+#endif
 
 		m_DmgTake = clamp( m_DmgTake, 0, 255 );
 		m_DmgSave = clamp( m_DmgSave, 0, 255 );
@@ -335,21 +439,44 @@ void CSDKPlayer::UpdateClientData( void )
 		// Without this check, any damage that occured to the player while they were
 		// recovering from a poison bite would register as poisonous as well and flash
 		// the whole screen! -- jdw
+#ifdef OFFSHORE_DLL
+		if ( hVisibleDamageBits.HasElement(DMG_POISON) )
+#else
 		if ( visibleDamageBits & DMG_POISON )
+#endif
 		{
 			float flLastPoisonedDelta = gpGlobals->curtime - m_tbdPrev;
 			if ( flLastPoisonedDelta > 0.1f )
 			{
+#ifdef OFFSHORE_DLL
+				hVisibleDamageBits.FindAndRemove(DMG_POISON);
+#else
 				visibleDamageBits &= ~DMG_POISON;
+#endif
 			}
 		}
+
+#ifdef OFFSHORE_DLL
+		char szVisibleDamageBits[256];
+		FOR_EACH_VEC(hVisibleDamageBits, i)
+		{
+			if( !i )
+				UTIL_VarArgs("d%", hVisibleDamageBits[i]);
+
+			UTIL_VarArgs("s% d%", szVisibleDamageBits, hVisibleDamageBits[i]);
+		}
+#endif
 
 		CSingleUserRecipientFilter user( this );
 		user.MakeReliable();
 		UserMessageBegin( user, "Damage" );
 			WRITE_BYTE( m_DmgSave );
 			WRITE_BYTE( m_DmgTake );
+#ifdef OFFSHORE_DLL
+			WRITE_STRING( szVisibleDamageBits );
+#else
 			WRITE_LONG( visibleDamageBits );
+#endif
 			WRITE_FLOAT( damageOrigin.x );	//BUG: Should be fixed point (to hud) not floats
 			WRITE_FLOAT( damageOrigin.y );	//BUG: However, the HUD does _not_ implement bitfield messages (yet)
 			WRITE_FLOAT( damageOrigin.z );	//BUG: We use WRITE_VEC3COORD for everything else
@@ -357,11 +484,27 @@ void CSDKPlayer::UpdateClientData( void )
 	
 		m_DmgTake = 0;
 		m_DmgSave = 0;
+#ifdef OFFSHORE_DLL
+		m_hHUDDamage = m_hDamageType;
+#else
 		m_bitsHUDDamage = m_bitsDamageType;
-		
+#endif	
 		// Clear off non-time-based damage indicators
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hTimeBasedDamage;
+		g_pGameRules->Damage_GetTimeBased(&hTimeBasedDamage);
+		CUtlVector<int> hRes;
+		FOR_EACH_VEC(hTimeBasedDamage, i)
+		{
+			if( m_hDamageType.HasElement(hTimeBasedDamage[i]) )
+				hRes.AddToTail(hTimeBasedDamage[i]);
+		}
+
+		m_hDamageType = hRes;
+#else
 		int iTimeBasedDamage = g_pGameRules->Damage_GetTimeBased();
 		m_bitsDamageType &= iTimeBasedDamage;
+#endif
 	}
 
 	BaseClass::UpdateClientData();
@@ -376,7 +519,7 @@ void CSDKPlayer::UpdateClientData( void )
 void CSDKPlayer::CreateViewModel( int index )
 {
 	BaseClass::CreateViewModel( index );
-	return;
+
 	Assert( index >= 0 && index < MAX_VIEWMODELS );
 
 	if ( GetViewModel( index ) )
@@ -401,9 +544,34 @@ bool CSDKPlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex )
 	return bRet;
 }
 
+bool CSDKPlayer::Weapon_Detach( CBaseCombatWeapon *pWeapon )
+{
+	RemoveWeaponFromSlots( pWeapon );
+	bool bRet = BaseClass::Weapon_Detach( pWeapon );
+
+	for( unsigned short i = 0; i < m_hWeaponSlots.Count(); i++ )
+		DevMsg( "%s\n", m_hWeaponSlots.Element(i)->GetSchemaName() );
+
+	return bRet;
+}
+
 void CSDKPlayer::Weapon_Equip( CBaseCombatWeapon *pWeapon )
 {
+	if( GetWeaponInSlot( pWeapon->GetSlot(), pWeapon->GetPosition() ) )
+	{
+		Warning("WARNING: MULTIPLE WEAPONS IN THE SAME SLOT!");
+	}
+	else
+		m_hWeaponSlots.Insert( CBucketIndex(pWeapon->GetSlot(), pWeapon->GetPosition()), pWeapon );
+
 	BaseClass::Weapon_Equip( pWeapon );
+
+	CBaseSDKCombatWeapon *pSDKWeapon = dynamic_cast<CBaseSDKCombatWeapon *>(pWeapon);
+
+	if( pSDKWeapon )
+	{
+		pSDKWeapon->m_iReserveAmmo = pSDKWeapon->GetMaxReserveAmmo();
+	}
 }
 
 extern int	gEvilImpulse101;
@@ -438,7 +606,7 @@ bool CSDKPlayer::BumpWeapon( CBaseCombatWeapon *pWeapon )
 	// ----------------------------------------
 	// If I already have it just take the ammo
 	// ----------------------------------------
-	if (Weapon_OwnsThisType( pWeapon->GetClassname(), pWeapon->GetSubType())) 
+	if( Weapon_OwnsThisType( pWeapon->GetSchemaName(), pWeapon->GetSubType()) ) 
 	{
 		//Only remove the weapon if we attained ammo from it
 		if ( Weapon_EquipAmmoOnly( pWeapon ) == false )
@@ -469,7 +637,7 @@ bool CSDKPlayer::BumpWeapon( CBaseCombatWeapon *pWeapon )
 			}
 
 			//Attempt to take ammo if this is the gun we're holding already
-			if ( Weapon_OwnsThisType( pWeapon->GetClassname(), pWeapon->GetSubType() ) )
+			if ( Weapon_OwnsThisType( pWeapon->GetSchemaName(), pWeapon->GetSubType() ) )
 			{
 				Weapon_EquipAmmoOnly( pWeapon );
 			}
@@ -482,6 +650,22 @@ bool CSDKPlayer::BumpWeapon( CBaseCombatWeapon *pWeapon )
 	Weapon_Equip( pWeapon );
 
 	return true;
+}
+
+CBaseCombatWeapon *CSDKPlayer::GetWeaponInSlot( int iSlot, int iPos )
+{
+	unsigned short iElement = m_hWeaponSlots.Find(CBucketIndex(iSlot, iPos));
+
+	if( iElement == m_hWeaponSlots.InvalidIndex() || iElement >= m_hWeaponSlots.Count() )
+		return NULL;
+
+	return m_hWeaponSlots.Element(iElement);
+}
+
+void CSDKPlayer::RemoveWeaponFromSlots( CBaseCombatWeapon *pWeapon )
+{
+	unsigned short iIndex = m_hWeaponSlots.Find( CBucketIndex(pWeapon->GetSlot(), pWeapon->GetPosition()) );
+	m_hWeaponSlots.RemoveAt( iIndex );
 }
 
 //-----------------------------------------------------------------------------
@@ -776,14 +960,22 @@ int	CSDKPlayer::OnTakeDamage( const CTakeDamageInfo &info )
 	CTakeDamageInfo inputInfoCopy( info );
 
 	// If you shoot yourself, make it hurt but push you less
+#ifdef OFFSHORE_DLL
+	if ( inputInfoCopy.GetAttacker() == this && inputInfoCopy.GetDamageTypes()->HasElement(DMG_BULLET) )
+#else
 	if ( inputInfoCopy.GetAttacker() == this && inputInfoCopy.GetDamageType() == DMG_BULLET )
+#endif
 	{
 		inputInfoCopy.ScaleDamage( 5.0f );
 		inputInfoCopy.ScaleDamageForce( 0.05f );
 	}
 	
 	// ignore fall damage if instructed to do so by input
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_FALL) )
+#else
 	if ( ( info.GetDamageType() & DMG_FALL ) )
+#endif
 	{
 		inputInfoCopy.SetDamage(0.0f);
 	}
@@ -810,7 +1002,11 @@ int	CSDKPlayer::OnTakeDamage( const CTakeDamageInfo &info )
 int CSDKPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
 	// set damage type sustained
+#ifdef OFFSHORE_DLL
+	m_hDamageType.AddVectorToTail(*info.GetDamageTypes());
+#else
 	m_bitsDamageType |= info.GetDamageType();
+#endif
 
 	if ( !CBaseCombatCharacter::OnTakeDamage_Alive( info ) )
 		return 0;
@@ -839,7 +1035,11 @@ int CSDKPlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 	}
 
 	// Burnt
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_BURN) )
+#else
 	if ( info.GetDamageType() & DMG_BURN )
+#endif
 	{
 		EmitSound( "Player.BurnPain" );
 	}
@@ -907,7 +1107,36 @@ void CSDKPlayer::Event_Killed( const CTakeDamageInfo &info )
 	{
 		GetBotController()->OnDeath( info );
 	}
+
+	CreateRagdollEntity();
 }
+
+
+void CSDKPlayer::CreateRagdollEntity()
+{
+	// If we already have a ragdoll, don't make another one.
+	CSDKRagdoll *pRagdoll = dynamic_cast< CSDKRagdoll* >( m_hRagdoll.Get() );
+
+	if ( !pRagdoll )
+	{
+		// create a new one
+		pRagdoll = dynamic_cast< CSDKRagdoll* >( CreateEntityByName( "sdk_ragdoll" ) );
+	}
+
+	if ( pRagdoll )
+	{
+		pRagdoll->m_hPlayer = this;
+		pRagdoll->m_vecRagdollOrigin = GetAbsOrigin();
+		pRagdoll->m_vecRagdollVelocity = GetAbsVelocity();
+		pRagdoll->m_nModelIndex = m_nModelIndex;
+		pRagdoll->m_nForceBone = m_nForceBone;
+		pRagdoll->m_vecForce = Vector(0,0,0);
+	}
+
+	// ragdolls will be removed on round restart automatically
+	m_hRagdoll = pRagdoll;
+}
+
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -981,6 +1210,51 @@ void CSDKPlayer::GiveDefaultItems( void )
 	{
 		GiveNamedItem( GetClass(this).m_hWeaponNames[i] );
 	}
+}
+
+CBaseEntity *CSDKPlayer::GiveNamedItem( const char *szName, int iSubType, bool removeIfNotCarried )
+{
+	// If I already own this type don't create one
+	if ( Weapon_OwnsThisType(szName, iSubType) )
+		return NULL;
+
+	const char *szWeaponClass = szName;
+	bool bUsesSchema = false;
+
+	KeyValues *pSchemaWeapon = ItemSchema()->GetWeapon(szName);
+	if( pSchemaWeapon && pSchemaWeapon->GetString("weapon_class") )
+	{
+		szWeaponClass = pSchemaWeapon->GetString("weapon_class");
+		bUsesSchema = true;
+	}
+
+	EHANDLE pent;
+
+	pent = CreateEntityByName(szWeaponClass);
+	if ( pent == NULL )
+	{
+		Msg( "NULL Ent in GiveNamedItem!\n" );
+		return NULL;
+	}
+
+	pent->SetLocalOrigin( GetLocalOrigin() );
+	pent->AddSpawnFlags( SF_NORESPAWN );
+
+	CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon*>( (CBaseEntity*)pent );
+	if ( pWeapon )
+	{
+		pWeapon->SetSubType( iSubType );
+		pWeapon->SetupSchemaItem( szName );
+	}
+
+	DispatchSpawn( pent );
+
+	if ( pent != NULL && !(pent->IsMarkedForDeletion()) ) 
+	{
+		pent->Touch( this );
+	}
+
+	return pent;
 }
 
 //-----------------------------------------------------------------------------
@@ -1066,7 +1340,7 @@ bool CSDKPlayer::ClientCommand(const CCommand &args)
 		if( iDesiredClass == -1 )
 			iDesiredClass = atoi(args[1]);
 
-		if( iDesiredClass >= GetClassManager()->m_iClassCount || iDesiredClass == m_iClassNumber )
+		if( iDesiredClass >= ClassManager()->m_iClassCount || iDesiredClass == m_iClassNumber )
 			return false;
 
 		m_iClassNumber = iDesiredClass;
@@ -1286,4 +1560,19 @@ CSound* CSDKPlayer::GetBestScent()
     }
 
     return pResult;
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+CON_COMMAND( get_weapon_in_pos, "" )
+{
+	CSDKPlayer *pPlayer = ToSDKPlayer( UTIL_GetCommandClient() ); 
+	if ( pPlayer 
+		&& args.ArgC() >= 2 )
+	{
+		CBaseCombatWeapon *pWeapon = pPlayer->GetWeaponInSlot(atoi(args[1]), args.ArgC() > 2 ? atoi(args[2]) : 0);
+
+		if( pWeapon )
+			Msg( "Weapon in slot %d %d is %s." , atoi(args[1]), args.ArgC() > 2 ? atoi(args[2]) : 0, pWeapon->GetSchemaName() );
+	}
 }

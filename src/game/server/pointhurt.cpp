@@ -35,6 +35,9 @@ public:
 
 	int			m_nDamage;
 	int			m_bitsDamageType;
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> m_hDamageType;
+#endif
 	float		m_flRadius;
 	float		m_flDelay;
 	string_t	m_strTarget;
@@ -96,6 +99,17 @@ void CPointHurt::Spawn(void)
 		m_flDelay = 0.1f;
 	}
 
+#ifdef OFFSHORE_DLL
+	// TODO: THIS IS A HORRIBLE HACK
+	// Leave it as a legacy option
+	//  but DEFINITELY add a proper way to support all damage types - Kay
+	for( int i = 0; i < DMG_COUNT; i++ )
+	{ 
+		if( m_bitsDamageType & ( 1 << i ) )
+			m_hDamageType.AddToTail(i);
+	}
+#endif
+
 	Precache();
 }
 
@@ -115,8 +129,13 @@ void CPointHurt::HurtThink( void )
 	if ( m_strTarget != NULL_STRING )
 	{
 		CBaseEntity	*pEnt = NULL;
-			
+
+#ifdef OFFSHORE_DLL
+		CTakeDamageInfo info( this, m_pActivator, m_nDamage, &m_hDamageType );
+#else
 		CTakeDamageInfo info( this, m_pActivator, m_nDamage, m_bitsDamageType );
+#endif
+		
 		while ( ( pEnt = gEntList.FindEntityByName( pEnt, m_strTarget, NULL, m_pActivator ) ) != NULL )
 		{
 			GuessDamageForce( &info, (pEnt->GetAbsOrigin() - GetAbsOrigin()), pEnt->GetAbsOrigin() );
@@ -125,7 +144,11 @@ void CPointHurt::HurtThink( void )
 	}
 	else
 	{
+#ifdef OFFSHORE_DLL
+		RadiusDamage( CTakeDamageInfo( this, this, m_nDamage, &m_hDamageType ), GetAbsOrigin(), m_flRadius, CLASS_NONE, NULL );
+#else
 		RadiusDamage( CTakeDamageInfo( this, this, m_nDamage, m_bitsDamageType ), GetAbsOrigin(), m_flRadius, CLASS_NONE, NULL );
+#endif
 	}
 
 	SetNextThink( gpGlobals->curtime + m_flDelay );

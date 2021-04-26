@@ -96,9 +96,17 @@ CAmmoDef* GetAmmoDef()
 	if ( !bInitted )
 	{
 		bInitted = true;
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_BULLET);
+		def.AddAmmoType("Pistol",	&hDamage,		TRACER_LINE_AND_WHIZ, "sk_plr_dmg_pistol",	"sk_npc_dmg_pistol", "sk_max_pistol", BULLET_IMPULSE(200, 1225), 0 );
+		def.AddAmmoType("SMG",		&hDamage,	TRACER_LINE_AND_WHIZ, "sk_plr_dmg_smg", "sk_npc_dmg_smg", "sk_max_smg", BULLET_IMPULSE(200, 1225), 0 );
+		hDamage.AddToTail(DMG_BUCKSHOT);
+		def.AddAmmoType("Shotgun",	&hDamage,	TRACER_LINE, "sk_plr_dmg_shotgun", "sk_npc_dmg_shotgun", "sk_max_shotgun", BULLET_IMPULSE(400, 1200), 0 );
+#else
 		def.AddAmmoType("Pistol",	DMG_BULLET,		TRACER_LINE_AND_WHIZ, "sk_plr_dmg_pistol",	"sk_npc_dmg_pistol", "sk_max_pistol", BULLET_IMPULSE(200, 1225), 0 );
 		def.AddAmmoType("SMG",		DMG_BULLET,	TRACER_LINE_AND_WHIZ, "sk_plr_dmg_smg", "sk_npc_dmg_smg", "sk_max_smg", BULLET_IMPULSE(200, 1225), 0 );
 		def.AddAmmoType("Shotgun",	DMG_BULLET | DMG_BUCKSHOT,	TRACER_LINE, "sk_plr_dmg_shotgun", "sk_npc_dmg_shotgun", "sk_max_shotgun", BULLET_IMPULSE(400, 1200), 0 );
+#endif
 	}
 
 	return &def;
@@ -124,7 +132,7 @@ void CSDKGameRules::Precache(void)
 {
 	BaseClass::Precache();
 
-	GetClassManager()->PrecacheClasses();
+	ClassManager()->PrecacheClasses();
 }
 
 bool CSDKGameRules::ClientCommand( CBaseEntity *pEdict, const CCommand &args )

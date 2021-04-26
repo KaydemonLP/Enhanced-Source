@@ -13,11 +13,19 @@
 #include "c_te_effect_dispatch.h"
 #include "istudiorender.h"
 
+#ifdef OFFSHORE_DLL
+// Parse the impact data from the server's data block
+C_BaseEntity *ParseImpactData( const CEffectData &data, Vector *vecOrigin, Vector *vecStart, Vector *vecShotDir, short &nSurfaceProp, int &iMaterial, CUtlVector<int> *hDamageType, int &iHitbox );
+
+// Get the decal name to use based on an impact with the specified entity, surface material, and damage type
+char const *GetImpactDecal( C_BaseEntity *pEntity, int iMaterial, CUtlVector<int> *hDamageType );
+#else
 // Parse the impact data from the server's data block
 C_BaseEntity *ParseImpactData( const CEffectData &data, Vector *vecOrigin, Vector *vecStart, Vector *vecShotDir, short &nSurfaceProp, int &iMaterial, int &iDamageType, int &iHitbox );
 
 // Get the decal name to use based on an impact with the specified entity, surface material, and damage type
 char const *GetImpactDecal( C_BaseEntity *pEntity, int iMaterial, int iDamageType );
+#endif
 
 // Basic decal handling
 // Returns true if it hit something
@@ -27,8 +35,11 @@ enum
 	IMPACT_REPORT_RAGDOLL_IMPACTS = 0x2,
 };
 
+#ifdef OFFSHORE_DLL
+bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, CUtlVector<int> *hDamageType, int iHitbox, C_BaseEntity *pEntity, trace_t &tr, int nFlags = 0, int maxLODToDecal = ADDDECAL_TO_ALL_LODS );
+#else
 bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, int iDamageType, int iHitbox, C_BaseEntity *pEntity, trace_t &tr, int nFlags = 0, int maxLODToDecal = ADDDECAL_TO_ALL_LODS );
-
+#endif
 // Flags for PerformCustomEffects
 enum
 {
@@ -53,7 +64,11 @@ class CRagdollEnumerator : public IPartitionEnumerator
 {
 public:
 	// Forced constructor
+#ifdef OFFSHORE_DLL
+	CRagdollEnumerator( Ray_t& shot, CUtlVector<int> *hDamageType );
+#else
 	CRagdollEnumerator( Ray_t& shot, int iDamageType );
+#endif
 
 	// Actual work code
 	virtual IterationRetval_t EnumElement( IHandleEntity *pHandleEntity );
@@ -62,7 +77,11 @@ public:
 
 private:
 	Ray_t			m_rayShot;
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>	m_hDamageType;
+#else
 	int				m_iDamageType;
+#endif
 	bool			m_bHit;
 };
 

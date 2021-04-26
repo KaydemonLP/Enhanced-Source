@@ -35,13 +35,21 @@ public:
 		MoveType_t	iMovetype,
 		MoveCollide_t nMoveCollide,
 		int	iDamage,
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> *hDamageType,
+#else
 		int iDamageType,
+#endif
 		CBaseEntity *pIntendedTarget = NULL );
 
 	virtual void Precache( void ) {};
 
 	int	m_iDmg;
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> m_hDmgType;
+#else
 	int m_iDmgType;
+#endif
 	EHANDLE m_hIntendedTarget;
 };
 

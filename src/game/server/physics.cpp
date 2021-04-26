@@ -697,7 +697,12 @@ bool CCollisionEvent::ShouldFreezeObject( IPhysicsObject *pObject )
 			// this object can take damage, crush it
 			if ( pEntity->m_takedamage > DAMAGE_EVENTS_ONLY )
 			{
+#ifdef OFFSHORE_DLL
+				CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_CRUSH);
+				CTakeDamageInfo dmgInfo( pOther, pOther, force, contactPos, force.Length() * 0.1f, &hDamageType );
+#else
 				CTakeDamageInfo dmgInfo( pOther, pOther, force, contactPos, force.Length() * 0.1f, DMG_CRUSH );
+#endif
 				PhysCallbackDamage( pEntity, dmgInfo );
 			}
 			else
@@ -2291,8 +2296,24 @@ void CCollisionEvent::AddDamageEvent( CBaseEntity *pEntity, const CTakeDamageInf
 	if ( pEntity->IsMarkedForDeletion() )
 		return;
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType;
+	g_pGameRules->Damage_GetTimeBased(&hDamageType); hDamageType.AddToTail(DMG_BURN); hDamageType.AddToTail(DMG_DROWN); hDamageType.AddToTail(DMG_PREVENT_PHYSICS_FORCE);
+	bool bHasType = false;
+	FOR_EACH_VEC(hDamageType, i)
+	{
+		if( info.GetDamageTypes()->HasElement(hDamageType[i]) )
+		{
+			bHasType = true;
+			break;
+		}
+	}
+
+	if( !bHasType )
+#else
 	int iTimeBasedDamage = g_pGameRules->Damage_GetTimeBased();
 	if ( !( info.GetDamageType() & (DMG_BURN | DMG_DROWN | iTimeBasedDamage | DMG_PREVENT_PHYSICS_FORCE) ) )
+#endif
 	{
 		Assert( info.GetDamageForce() != vec3_origin && info.GetDamagePosition() != vec3_origin );
 	}

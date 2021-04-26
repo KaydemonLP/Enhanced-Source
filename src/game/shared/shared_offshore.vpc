@@ -15,6 +15,7 @@ $Project
 			$File	"$SHARED\template\sdk_gamemovement.cpp"
 			$File	"$SHARED\template\sdk_gamerules_sp.cpp"
 			$File	"$SHARED\template\sdk_gamerules_sp.h"
+			$File	"$SHARED\template\sdk_shareddefs.cpp"
 			$File	"$SHARED\template\sdk_shareddefs.h"
 			$File	"$SHARED\template\sdk_usermessages.cpp"
 			$File	"$SHARED\template\sdk_weapon_parse.cpp"
@@ -23,14 +24,30 @@ $Project
 			$File	"$SHARED\template\sdk_playerclass_shared.h"
 			$File	"$SHARED\template\sdk_player_shared.h"
 
-			$Folder	"OF"
+			$Folder	"Offshore"
 			{
+				$Folder	"Schemas"
+				{
+					$File	"$SHARED\of\schemas\of_attributes.cpp"
+					$File	"$SHARED\of\schemas\of_attributes.h"
+				}
+
+				$File	"$SHARED\of\of_baseschemaitem.cpp"
+				$File	"$SHARED\of\of_baseschemaitem.h"					
 				$File	"$SHARED\of\of_class_parse.cpp"
-				$File	"$SHARED\of\of_class_parse.h"			
+				$File	"$SHARED\of\of_class_parse.h"	
+				$File	"$SHARED\of\of_fx_shared.cpp"
+				$File	"$SHARED\of\of_fx_shared.h"
+				$File	"$SHARED\of\of_playeranimstate.cpp"
+				$File	"$SHARED\of\of_playeranimstate.h"
 				$File	"$SHARED\of\of_shared_schemas.cpp"
 				$File	"$SHARED\of\of_shared_schemas.h"
 				$File	"$SHARED\of\of_weaponbase.cpp"
 				$File	"$SHARED\of\of_weaponbase.h"
+				$File	"$SHARED\of\of_weaponbase_ranged.cpp"
+				$File	"$SHARED\of\of_weaponbase_ranged.h"
+				$File	"$SHARED\of\of_weaponbase_melee.cpp"
+				$File	"$SHARED\of\of_weaponbase_melee.h"
 				
 				$Folder "Weapons"
 				{

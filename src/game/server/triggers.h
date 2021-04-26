@@ -186,6 +186,9 @@ public:
 	float	m_flLastDmgTime;	// Time that we last applied damage.
 	float	m_flDmgResetTime;	// For forgiveness, the time to reset the counter that accumulates damage.
 	int		m_bitsDamageInflict;	// DMG_ damage type that the door or tigger does
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>	m_hDamageInflict;	// DMG_ damage type that the door or tigger does
+#endif
 	int		m_damageModel;
 	bool	m_bNoDmgForce;		// Should damage from this trigger impart force on what it's hurting
 

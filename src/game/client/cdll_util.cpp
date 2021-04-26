@@ -347,7 +347,11 @@ void UTIL_Tracer( const Vector &vecStart, const Vector &vecEnd, int iEntIndex, i
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void UTIL_ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName )
+#else
 void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
+#endif
 {
 	C_BaseEntity *pEntity = pTrace->m_pEnt;
 
@@ -362,7 +366,11 @@ void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName
 	if ( pTrace->surface.flags & SURF_NODRAW )
 		return;
 
+#ifdef OFFSHORE_DLL
+	pEntity->ImpactTrace( pTrace, hDamageType, pCustomImpactName );
+#else
 	pEntity->ImpactTrace( pTrace, iDamageType, pCustomImpactName );
+#endif
 }
 
 //-----------------------------------------------------------------------------

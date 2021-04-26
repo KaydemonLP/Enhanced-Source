@@ -35,7 +35,9 @@ LINK_ENTITY_TO_CLASS( baseprojectile, CBaseProjectile );
 BEGIN_DATADESC( CBaseProjectile )
 
 DEFINE_FIELD( m_iDmg,		FIELD_INTEGER ),
+#ifndef OFFSHORE_DLL
 DEFINE_FIELD( m_iDmgType,	FIELD_INTEGER ),
+#endif
 DEFINE_FIELD( m_hIntendedTarget, FIELD_EHANDLE ),
 
 END_DATADESC()
@@ -49,7 +51,11 @@ void CBaseProjectile::Spawn(	char *pszModel,
 								  MoveType_t	iMovetype,
 								  MoveCollide_t nMoveCollide,
 								  int	iDamage,
+#ifdef OFFSHORE_DLL
+								  CUtlVector<int> *hDamageType,
+#else
 								  int iDamageType,
+#endif
 								  CBaseEntity *pIntendedTarget )
 {
 	Precache();
@@ -57,8 +63,11 @@ void CBaseProjectile::Spawn(	char *pszModel,
 	SetModel( pszModel );
 
 	m_iDmg = iDamage;
+#ifdef OFFSHORE_DLL
+	m_hDmgType = *hDamageType;
+#else
 	m_iDmgType = iDamageType;
-
+#endif
 
 	SetMoveType( iMovetype, nMoveCollide );
 	UTIL_SetSize( this, -Vector(1,1,1), Vector(1,1,1) );
@@ -111,7 +120,11 @@ void CBaseProjectile::HandleTouch( CBaseEntity *pOther )
 	trace_t	tr;
 	tr = BaseClass::GetTouchTrace( );
 
+#ifdef OFFSHORE_DLL
+	CTakeDamageInfo info( this, pOwner, m_iDmg, &m_hDmgType );
+#else
 	CTakeDamageInfo info( this, pOwner, m_iDmg, m_iDmgType );
+#endif
 	GuessDamageForce( &info, (tr.endpos - tr.startpos), tr.endpos );
 	pOther->TakeDamage( info );
 

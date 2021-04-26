@@ -111,7 +111,11 @@ END_PREDICTION_DATA()
 #define SF_DETONATE		0x0001
 
 // UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
+#ifdef OFFSHORE_DLL
+void CBaseGrenade::Explode( trace_t *pTrace, CUtlVector<int> *hDamageType )
+#else
 void CBaseGrenade::Explode( trace_t *pTrace, int bitsDamageType )
+#endif
 {
 #if !defined( CLIENT_DLL )
 	
@@ -169,7 +173,11 @@ void CBaseGrenade::Explode( trace_t *pTrace, int bitsDamageType )
 	Vector vecReported = m_hThrower ? m_hThrower->GetAbsOrigin() : vec3_origin;
 	
 	EmitSound( "BaseGrenade.Explode" );
+#ifdef OFFSHORE_DLL
+	CTakeDamageInfo info( this, m_hThrower, GetBlastForce(), GetAbsOrigin(), m_flDamage, hDamageType, 0, &vecReported );
+#else
 	CTakeDamageInfo info( this, m_hThrower, GetBlastForce(), GetAbsOrigin(), m_flDamage, bitsDamageType, 0, &vecReported );
+#endif
 
 	RadiusDamage( info, GetAbsOrigin(), m_DmgRadius, CLASS_NONE, NULL );
 
@@ -293,7 +301,12 @@ void CBaseGrenade::Detonate( void )
 		UTIL_TraceLine( GetAbsOrigin(), GetAbsOrigin() + Vector( 0, 0, -32), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr );
 	}
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_BLAST);
+	Explode( &tr, &hDamageType );
+#else
 	Explode( &tr, DMG_BLAST );
+#endif
 
 	if ( GetShakeAmplitude() )
 	{
@@ -319,7 +332,12 @@ void CBaseGrenade::ExplodeTouch( CBaseEntity *pOther )
 	vecSpot = GetAbsOrigin() - velDir * 32;
 	UTIL_TraceLine( vecSpot, vecSpot + velDir * 64, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_BLAST);
+	Explode( &tr, &hDamageType );
+#else
 	Explode( &tr, DMG_BLAST );
+#endif
 }
 
 
@@ -364,7 +382,13 @@ void CBaseGrenade::BounceTouch( CBaseEntity *pOther )
 			ClearMultiDamage( );
 			Vector forward;
 			AngleVectors( GetLocalAngles(), &forward, NULL, NULL );
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CLUB);
+			CTakeDamageInfo info( this, m_hThrower, 1, &hDamage );
+#else
 			CTakeDamageInfo info( this, m_hThrower, 1, DMG_CLUB );
+#endif
+			
 			CalculateMeleeDamageForce( &info, GetAbsVelocity(), GetAbsOrigin() );
 			pOther->DispatchTraceAttack( info, forward, &tr ); 
 			ApplyMultiDamage();

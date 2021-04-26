@@ -154,7 +154,12 @@ void CBaseSDKBludgeonWeapon::Hit( trace_t &traceHit, Activity nHitActivity, bool
 		pPlayer->EyeVectors( &hitDirection, NULL, NULL );
 		VectorNormalize( hitDirection );
 
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_GENERIC);
+		CTakeDamageInfo info( GetOwner(), GetOwner(), GetDamageForActivity( nHitActivity ), &hDamageType );
+#else
 		CTakeDamageInfo info( GetOwner(), GetOwner(), GetDamageForActivity( nHitActivity ), DMG_CLUB );
+#endif
 
 		if( pPlayer && pHitEntity->IsNPC() )
 		{
@@ -291,7 +296,12 @@ void CBaseSDKBludgeonWeapon::ImpactEffect( trace_t &traceHit )
 		return;
 
 	//FIXME: need new decals
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CLUB);
+	UTIL_ImpactTrace( &traceHit, &hDamage );
+#else
 	UTIL_ImpactTrace( &traceHit, DMG_CLUB );
+#endif
 }
 
 
@@ -320,7 +330,12 @@ void CBaseSDKBludgeonWeapon::Swing( int bIsSecondary )
 	Activity nHitActivity = ACT_VM_HITCENTER;
 
 	// Like bullets, bludgeon traces have to trace against triggers.
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_CLUB);
+	CTakeDamageInfo triggerInfo( GetOwner(), GetOwner(), GetDamageForActivity( nHitActivity ), &hDamageType );
+#else
 	CTakeDamageInfo triggerInfo( GetOwner(), GetOwner(), GetDamageForActivity( nHitActivity ), DMG_CLUB );
+#endif
 	triggerInfo.SetDamagePosition( traceHit.startpos );
 	triggerInfo.SetDamageForce( forward );
 	TraceAttackToTriggers( triggerInfo, traceHit.startpos, traceHit.endpos, forward );
@@ -351,15 +366,6 @@ void CBaseSDKBludgeonWeapon::Swing( int bIsSecondary )
 				nHitActivity = ChooseIntersectionPointAndActivity( traceHit, g_bludgeonMins, g_bludgeonMaxs, pOwner );
 			}
 		}
-	}
-
-	if ( !bIsSecondary )
-	{
-		m_iPrimaryAttacks++;
-	} 
-	else 
-	{
-		m_iSecondaryAttacks++;
 	}
 
 	gamestats->Event_WeaponFired( pOwner, !bIsSecondary, GetClassname() );

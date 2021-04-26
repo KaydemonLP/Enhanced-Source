@@ -8,6 +8,7 @@
 #include "cbase.h"
 #include "weapons/c_basesdkcombatweapon.h"
 #include "sdk_playerclass_shared.h"
+#include "of_playeranimstate.h"
 
 #undef CSDKPlayer
 
@@ -24,7 +25,7 @@
 
 #endif
 
-class C_SDKPlayer : public C_BasePlayer
+class C_SDKPlayer : public C_BasePlayer, public ISDKPlayerAnimStateHelpers
 {
 public:
 	DECLARE_CLASS( C_SDKPlayer, C_BasePlayer );
@@ -32,13 +33,15 @@ public:
 	DECLARE_PREDICTABLE();
 
 	void OnDataChanged( DataUpdateType_t type );
+	void PostDataUpdate( DataUpdateType_t type  );
 	static C_SDKPlayer* GetLocalPlayer( int nSlot = -1 );
 
 	C_SDKPlayer();
 	~C_SDKPlayer( void );
-	void ClientThink( void );
 
-	C_BaseSDKCombatWeapon*	GetActiveSDKWeapon( void ) const;
+	static C_SDKPlayer* GetLocalSDKPlayer();
+
+	void ClientThink( void );
 
 	virtual bool ShouldRegenerateOriginFromCellBits() const
 	{
@@ -66,6 +69,30 @@ public:
 	// Shared Functions
 	virtual const QAngle &EyeAngles();
 public:
+	// ISDKPlayerAnimState overrides.
+	virtual CBaseSDKCombatWeapon* SDKAnim_GetActiveWeapon();
+	virtual bool SDKAnim_CanMove();
+
+	void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 );
+	bool ShouldDraw();
+
+	ISDKPlayerAnimState *m_PlayerAnimState;
+
+	QAngle	m_angEyeAngles;
+	CInterpolatedVar< QAngle >	m_iv_angEyeAngles;
+
+	CNetworkVar( int, m_iThrowGrenadeCounter );	// used to trigger grenade throw animations.
+	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
+
+	EHANDLE	m_hRagdoll;
+
+	CBaseSDKCombatWeapon *GetActiveSDKWeapon() const;
+
+	C_BaseAnimating *BecomeRagdollOnClient();
+	IRagdoll* C_SDKPlayer::GetRepresentativeRagdoll() const;
+
+	virtual CBaseCombatWeapon*	Weapon_OwnsThisType( const char *pszWeapon, int iSubType = 0 ) const;  // True if already owns a weapon of this class
+
 	void FireBullet( 
 		Vector vecSrc, 
 		const QAngle &shootAngles, 
@@ -92,8 +119,6 @@ public:
 	EHANDLE				m_hClosestNPC;
 	float				m_flSpeedModTime;
 	float				m_flExitSpeedMod;
-
-	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
 
 	CSDKPlayerShared 	m_PlayerShared;
 private:

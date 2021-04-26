@@ -41,6 +41,38 @@ enum
 	OF_HANDLING_AKIMBO
 };
 
+enum
+{
+	OF_PROJECTILE_BULLET,
+	OF_PROJECTILE_DYNAMITE,
+	OF_PROJECTILE_LASER,
+
+	OF_PROJECTILE_COUNT
+};
+
+enum
+{
+	OF_RELOAD_STAGE_NONE,
+	OF_RELOAD_STAGE_START,
+	OF_RELOAD_STAGE_LOOP,
+	OF_RELOAD_STAGE_END
+};
+
+enum PlayerAnimEvent_t
+{
+	PLAYERANIMEVENT_FIRE_GUN_PRIMARY = 0,
+	PLAYERANIMEVENT_FIRE_GUN_SECONDARY,
+	PLAYERANIMEVENT_THROW_GRENADE,
+	PLAYERANIMEVENT_JUMP,
+	PLAYERANIMEVENT_RELOAD,
+
+	PLAYERANIMEVENT_COUNT
+};
+
+extern const char *g_szProjectileTypes[];
+extern const char *g_szInputNames[];
+extern const char *g_szAnimEventName[];
+
 //========================
 // GAME UI
 //========================

@@ -77,7 +77,11 @@ void CFuncTankTrain::Spawn( void )
 // Filter out damage messages that don't contain blast damage (impervious to other forms of attack)
 int	CFuncTankTrain::OnTakeDamage( const CTakeDamageInfo &info )
 {
+#ifdef OFFSHORE_DLL
+	if ( ! (info.GetDamageTypes()->HasElement(DMG_BLAST)) )
+#else
 	if ( ! (info.GetDamageType() & DMG_BLAST) )
+#endif
 		return 0;
 
 	return BaseClass::OnTakeDamage( info );

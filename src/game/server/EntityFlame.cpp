@@ -293,12 +293,21 @@ void CEntityFlame::FlameThink( void )
 	if ( m_hEntAttached )
 	{
 		// Do radius damage ignoring the entity I'm attached to. This will harm things around me.
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_BURN);
+		RadiusDamage( CTakeDamageInfo( this, this, 4.0f, &hDamage ), GetAbsOrigin(), m_flSize/2, CLASS_NONE, m_hEntAttached );
+#else
 		RadiusDamage( CTakeDamageInfo( this, this, 4.0f, DMG_BURN ), GetAbsOrigin(), m_flSize/2, CLASS_NONE, m_hEntAttached );
-
+#endif
 		// Directly harm the entity I'm attached to. This is so we can precisely control how much damage the entity
 		// that is on fire takes without worrying about the flame's position relative to the bodytarget (which is the
 		// distance that the radius damage code uses to determine how much damage to inflict)
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hFlameDamage; hFlameDamage.AddToTail(DMG_BURN); hFlameDamage.AddToTail(DMG_DIRECT);
+		m_hEntAttached->TakeDamage( CTakeDamageInfo( this, this, FLAME_DIRECT_DAMAGE, &hFlameDamage ) );
+#else
 		m_hEntAttached->TakeDamage( CTakeDamageInfo( this, this, FLAME_DIRECT_DAMAGE, DMG_BURN | DMG_DIRECT ) );
+#endif
 
 		if( !m_hEntAttached->IsNPC() && hl2_episodic.GetBool() )
 		{
@@ -310,7 +319,12 @@ void CEntityFlame::FlameThink( void )
 	}
 	else
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_BURN);
+		RadiusDamage( CTakeDamageInfo( this, this, FLAME_RADIUS_DAMAGE, &hDamage ), GetAbsOrigin(), m_flSize/2, CLASS_NONE, NULL );
+#else
 		RadiusDamage( CTakeDamageInfo( this, this, FLAME_RADIUS_DAMAGE, DMG_BURN ), GetAbsOrigin(), m_flSize/2, CLASS_NONE, NULL );
+#endif
 	}
 
 	FireSystem_AddHeatInRadius( GetAbsOrigin(), m_flSize/2, 2.0f );

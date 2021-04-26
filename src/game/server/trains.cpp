@@ -500,7 +500,12 @@ void CFuncPlat::Blocked( CBaseEntity *pOther )
 	DevMsg( 2, "%s Blocked by %s\n", GetClassname(), pOther->GetClassname() );
 
 	// Hurt the blocker a little
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+	pOther->TakeDamage( CTakeDamageInfo( this, this, 1, &hDamage ) );
+#else
 	pOther->TakeDamage( CTakeDamageInfo( this, this, 1, DMG_CRUSH ) );
+#endif
 
 	if (m_sNoise != NULL_STRING)
 	{
@@ -703,7 +708,12 @@ void CFuncTrain::Blocked( CBaseEntity *pOther )
 	m_flNextBlockTime = gpGlobals->curtime + 0.5;
 	
 	//Inflict damage
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, &hDamage ) );
+#else
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
+#endif
 }
 
 
@@ -1678,7 +1688,12 @@ void CFuncTrackTrain::Blocked( CBaseEntity *pOther )
 		return;
 
 	// we can't hurt this thing, so we're not concerned with it
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, &hDamage ) );
+#else
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
+#endif
 }
 
 

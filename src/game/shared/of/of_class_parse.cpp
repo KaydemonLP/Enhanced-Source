@@ -29,6 +29,9 @@ ClassInfo_t::ClassInfo_t()
 	flWallJumpTime = 0.0f;
 	flWallClimbTime = 0.0f;
 
+	bCanSlide = false;
+	bCanWallRun = false;
+
 	iWeaponCount = 0;
 }
 
@@ -63,6 +66,9 @@ void ClassInfo_t::Parse( KeyValues *pKeyValuesData )
 	flWallClimbTime = pKeyValuesData->GetFloat( "wall_climb_time", 0.0f );
 	flWallRunTime = pKeyValuesData->GetFloat( "wall_run_time", 0.0f );
 	flSprintMultiplier = pKeyValuesData->GetFloat( "sprint_multiplier", 1.0f );
+
+	bCanSlide = pKeyValuesData->GetBool( "can_slide", false );
+	bCanWallRun = pKeyValuesData->GetBool( "can_wallrun", false );
 
 	// Equipment
 

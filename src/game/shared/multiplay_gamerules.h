@@ -97,20 +97,33 @@ public:
 
 // Functions to verify the single/multiplayer status of a game
 	virtual bool IsMultiplayer( void );
-
+#ifdef OFFSHORE_DLL
+	// Damage query implementations.
+	virtual bool	Damage_IsTimeBased		( CUtlVector<int> *hDamageType );			// Damage types that are time-based.
+	virtual bool	Damage_ShouldGibCorpse	( CUtlVector<int> *hDamageType );		// Damage types that gib the corpse.
+	virtual bool	Damage_ShowOnHUD		( CUtlVector<int> *hDamageType );			// Damage types that have client HUD art.
+	virtual bool	Damage_NoPhysicsForce	( CUtlVector<int> *hDamageType );		// Damage types that don't have to supply a physics force & position.
+	virtual bool	Damage_ShouldNotBleed	( CUtlVector<int> *hDamageType );		// Damage types that don't make the player bleed.
+	// UN-TEMP: These will NEVER go away, the pain, it does not dissapear
+	virtual void	Damage_GetTimeBased			( CUtlVector<int> *hDamageType );
+	virtual void	Damage_GetShouldGibCorpse	( CUtlVector<int> *hDamageType );
+	virtual void	Damage_GetShowOnHud			( CUtlVector<int> *hDamageType );
+	virtual void	Damage_GetNoPhysicsForce	( CUtlVector<int> *hDamageType );
+	virtual void	Damage_GetShouldNotBleed	( CUtlVector<int> *hDamageType );
+#else
 	// Damage query implementations.
 	virtual bool	Damage_IsTimeBased( int iDmgType );			// Damage types that are time-based.
 	virtual bool	Damage_ShouldGibCorpse( int iDmgType );		// Damage types that gib the corpse.
-	virtual bool	Damage_ShowOnHUD( int iDmgType );				// Damage types that have client HUD art.
+	virtual bool	Damage_ShowOnHUD( int iDmgType );			// Damage types that have client HUD art.
 	virtual bool	Damage_NoPhysicsForce( int iDmgType );		// Damage types that don't have to supply a physics force & position.
-	virtual bool	Damage_ShouldNotBleed( int iDmgType );			// Damage types that don't make the player bleed.
+	virtual bool	Damage_ShouldNotBleed( int iDmgType );		// Damage types that don't make the player bleed.
 	// TEMP: These will go away once DamageTypes become enums.
 	virtual int		Damage_GetTimeBased( void );
 	virtual int		Damage_GetShouldGibCorpse( void );
 	virtual int		Damage_GetShowOnHud( void );
 	virtual int		Damage_GetNoPhysicsForce( void );
 	virtual int		Damage_GetShouldNotBleed( void );
-
+#endif
 	CMultiplayRules();
 	virtual ~CMultiplayRules() {}
 

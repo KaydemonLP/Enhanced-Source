@@ -176,7 +176,11 @@ public:
 
 	virtual const impactdamagetable_t	&GetPhysicsImpactDamageTable( void );
 
-	int					TakeHealth( float flHealth, int bitsDamageType );
+#ifdef OFFSHORE_DLL
+	int				TakeHealth( float flHealth, CUtlVector<int> *hDamageType );
+#else
+	int				TakeHealth( float flHealth, int bitsDamageType );
+#endif
 	void				CauseDeath( const CTakeDamageInfo &info );
 
 	virtual	bool		FVisible ( CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = NULL ); // true iff the parameter can be seen by me.
@@ -287,7 +291,7 @@ public:
 	virtual bool		Weapon_CanUse( CBaseCombatWeapon *pWeapon );		// True is allowed to use this class of weapon
 	virtual void		Weapon_Equip( CBaseCombatWeapon *pWeapon );			// Adds weapon to player
 	virtual bool		Weapon_EquipAmmoOnly( CBaseCombatWeapon *pWeapon );	// Adds weapon ammo to player, leaves weapon
-	bool				Weapon_Detach( CBaseCombatWeapon *pWeapon );		// Clear any pointers to the weapon.
+	virtual bool		Weapon_Detach( CBaseCombatWeapon *pWeapon );		// Clear any pointers to the weapon.
 	virtual void		Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget = NULL, const Vector *pVelocity = NULL );
 	virtual	bool		Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex = 0 );		// Switch to given weapon if has ammo (false if failed)
 	virtual	Vector		Weapon_ShootPosition( );		// gun position at current position/orientation
@@ -361,10 +365,13 @@ public:
 
 	CBaseEntity				*FindHealthItem( const Vector &vecPosition, const Vector &range );
 
-
+#ifdef OFFSHORE_DLL
+	virtual CBaseEntity		*CheckTraceHullAttack( float flDist, const Vector &mins, const Vector &maxs, float flDamage, CUtlVector<int> *hDmgType, float forceScale = 1.0f, bool bDamageAnyNPC = false );
+	virtual CBaseEntity		*CheckTraceHullAttack( const Vector &vStart, const Vector &vEnd, const Vector &mins, const Vector &maxs, float flDamage, CUtlVector<int> *hDmgType, float flForceScale = 1.0f, bool bDamageAnyNPC = false );
+#else
 	virtual CBaseEntity		*CheckTraceHullAttack( float flDist, const Vector &mins, const Vector &maxs, float flDamage, int iDmgType, float forceScale = 1.0f, bool bDamageAnyNPC = false );
 	virtual CBaseEntity		*CheckTraceHullAttack( const Vector &vStart, const Vector &vEnd, const Vector &mins, const Vector &maxs, float flDamage, int iDmgType, float flForceScale = 1.0f, bool bDamageAnyNPC = false );
-
+#endif
 	virtual CBaseCombatCharacter *MyCombatCharacterPointer( void ) { return this; }
 
 	// VPHYSICS

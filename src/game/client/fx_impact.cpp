@@ -33,10 +33,18 @@ ImpactSoundRouteFn g_pImpactSoundRouteFn = NULL;
 //==========================================================================================================================
 // RAGDOLL ENUMERATOR
 //==========================================================================================================================
+#ifdef OFFSHORE_DLL
+CRagdollEnumerator::CRagdollEnumerator( Ray_t& shot, CUtlVector<int> *hDamageType )
+#else
 CRagdollEnumerator::CRagdollEnumerator( Ray_t& shot, int iDamageType )
+#endif
 {
 	m_rayShot = shot;
+#ifdef OFFSHORE_DLL
+	m_hDamageType = *hDamageType;
+#else
 	m_iDamageType = iDamageType;
+#endif
 	m_bHit = false;
 }
 
@@ -61,7 +69,11 @@ IterationRetval_t CRagdollEnumerator::EnumElement( IHandleEntity *pHandleEntity 
 
 	if ( tr.fraction < 1.0 )
 	{
+#ifdef OFFSHORE_DLL
+		pModel->ImpactTrace(&tr, &m_hDamageType, NULL);
+#else
 		pModel->ImpactTrace( &tr, m_iDamageType, NULL );
+#endif
 		m_bHit = true;
 
 		//FIXME: Yes?  No?
@@ -75,15 +87,22 @@ IterationRetval_t CRagdollEnumerator::EnumElement( IHandleEntity *pHandleEntity 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+bool FX_AffectRagdolls( Vector vecOrigin, Vector vecStart, CUtlVector<int> *hDamageType )
+#else
 bool FX_AffectRagdolls( Vector vecOrigin, Vector vecStart, int iDamageType )
+#endif
 {
 	// don't do this when lots of ragdolls are simulating
 	if ( s_RagdollLRU.CountRagdolls(true) > 1 )
 		return false;
 	Ray_t shotRay;
 	shotRay.Init( vecStart, vecOrigin );
-
+#ifdef OFFSHORE_DLL
+	CRagdollEnumerator ragdollEnum( shotRay, hDamageType );
+#else
 	CRagdollEnumerator ragdollEnum( shotRay, iDamageType );
+#endif
 	partition->EnumerateElementsAlongRay( PARTITION_CLIENT_RESPONSIVE_EDICTS, shotRay, false, &ragdollEnum );
 
 	return ragdollEnum.Hit();
@@ -95,7 +114,13 @@ bool FX_AffectRagdolls( Vector vecOrigin, Vector vecStart, int iDamageType )
 //-----------------------------------------------------------------------------
 void RagdollImpactCallback( const CEffectData &data )
 {
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage;
+	hDamage = data.m_hDamageType;
+	FX_AffectRagdolls( data.m_vOrigin, data.m_vStart, &hDamage );
+#else
 	FX_AffectRagdolls( data.m_vOrigin, data.m_vStart, data.m_nDamageType );
+#endif
 }
 
 DECLARE_CLIENT_EFFECT( RagdollImpact, RagdollImpactCallback );
@@ -103,7 +128,11 @@ DECLARE_CLIENT_EFFECT( RagdollImpact, RagdollImpactCallback );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, CUtlVector<int> *hDamageType, int iHitbox, C_BaseEntity *pEntity, trace_t &tr, int nFlags, int maxLODToDecal )
+#else
 bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, int iDamageType, int iHitbox, C_BaseEntity *pEntity, trace_t &tr, int nFlags, int maxLODToDecal )
+#endif
 {
 	VPROF( "Impact" );
 
@@ -127,12 +156,20 @@ bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, int iDamageType
 	
 	if ( !pEntity->IsClientCreated() )
 	{
+#ifdef OFFSHORE_DLL
+		bHitRagdoll = FX_AffectRagdolls( vecOrigin, vecStart, hDamageType );
+#else
 		bHitRagdoll = FX_AffectRagdolls( vecOrigin, vecStart, iDamageType );
+#endif
 	}
 
 	if ( (nFlags & IMPACT_NODECAL) == 0 )
 	{
+#ifdef OFFSHORE_DLL
+		int decalNumber = decalsystem->GetDecalIndexForName( GetImpactDecal( pEntity, iMaterial, hDamageType ) );
+#else
 		int decalNumber = decalsystem->GetDecalIndexForName( GetImpactDecal( pEntity, iMaterial, iDamageType ) );
+#endif
 		if ( decalNumber == -1 )
 			return false;
 
@@ -178,7 +215,11 @@ bool Impact( Vector &vecOrigin, Vector &vecStart, int iMaterial, int iDamageType
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+char const *GetImpactDecal( C_BaseEntity *pEntity, int iMaterial, CUtlVector<int> *hDamageType )
+#else
 char const *GetImpactDecal( C_BaseEntity *pEntity, int iMaterial, int iDamageType )
+#endif
 {
 	char const *decalName;
 	if ( !pEntity )
@@ -187,7 +228,11 @@ char const *GetImpactDecal( C_BaseEntity *pEntity, int iMaterial, int iDamageTyp
 	}
 	else
 	{
+#ifdef OFFSHORE_DLL
+		decalName = pEntity->DamageDecal( hDamageType, iMaterial );
+#else
 		decalName = pEntity->DamageDecal( iDamageType, iMaterial );
+#endif
 	}
 
 	// See if we need to offset the decal for material type
@@ -440,14 +485,24 @@ void SetImpactSoundRoute( ImpactSoundRouteFn fn )
 //			*iHitbox - 
 //			*iEntIndex - 
 //-----------------------------------------------------------------------------
+
 C_BaseEntity *ParseImpactData( const CEffectData &data, Vector *vecOrigin, Vector *vecStart, 
+#ifdef OFFSHORE_DLL
+	Vector *vecShotDir, short &nSurfaceProp, int &iMaterial, CUtlVector<int> *hDamageType, int &iHitbox)
+#else
 	Vector *vecShotDir, short &nSurfaceProp, int &iMaterial, int &iDamageType, int &iHitbox )
+#endif
 {
 	C_BaseEntity *pEntity = data.GetEntity( );
 	*vecOrigin = data.m_vOrigin;
 	*vecStart = data.m_vStart;
 	nSurfaceProp = data.m_nSurfaceProp;
+#ifdef OFFSHORE_DLL
+	*hDamageType = data.m_hDamageType;
+#else
 	iDamageType = data.m_nDamageType;
+#endif
+
 	iHitbox = data.m_nHitBox;
 
 	*vecShotDir = (*vecOrigin - *vecStart);

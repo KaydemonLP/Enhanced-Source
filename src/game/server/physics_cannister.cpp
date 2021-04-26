@@ -173,8 +173,15 @@ int CPhysicsCannister::OnTakeDamage( const CTakeDamageInfo &info )
 		{
 			// explosions that don't destroy will activate
 			// 50% of the time blunt damage will activate as well
+#ifdef OFFSHORE_DLL
+			if ( (info.GetDamageTypes()->HasElement(DMG_BLAST)) ||
+				( (info.GetDamageTypes()->HasElement(DMG_CLUB) 
+				|| info.GetDamageTypes()->HasElement(DMG_SLASH) 
+				|| info.GetDamageTypes()->HasElement(DMG_CRUSH) ) && random->RandomInt(1,100) < 50 ) )
+#else
 			if ( (info.GetDamageType() & DMG_BLAST) ||
 				( (info.GetDamageType() & (DMG_CLUB|DMG_SLASH|DMG_CRUSH) ) && random->RandomInt(1,100) < 50 ) )
+#endif
 			{
 				CannisterActivate( info.GetAttacker(), g_vecAttackDir );
 			}
@@ -185,7 +192,14 @@ int CPhysicsCannister::OnTakeDamage( const CTakeDamageInfo &info )
 	if ( (gpGlobals->curtime - m_activateTime) <= 0.1 )
 		return 0;
 
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_BULLET)
+		|| info.GetDamageTypes()->HasElement(DMG_BUCKSHOT)
+		|| info.GetDamageTypes()->HasElement(DMG_BURN)
+		|| info.GetDamageTypes()->HasElement(DMG_BLAST) )
+#else
 	if ( info.GetDamageType() & (DMG_BULLET|DMG_BUCKSHOT|DMG_BURN|DMG_BLAST) )
+#endif
 	{
 		Explode( info.GetAttacker() );
 	}

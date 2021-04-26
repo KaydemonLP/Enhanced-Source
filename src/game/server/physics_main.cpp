@@ -48,7 +48,11 @@ static void Physics_TraceEntity( CBaseEntity* pBaseEntity, const Vector &vecAbsS
 	// The TraceHull code below for shots will make sure the object passes
 	// through shields which do not block that damage type. It will also 
 	// send messages to the shields that they've been hit.
+#ifdef OFFSHORE_DLL
+	if( pBaseEntity->GetDamageTypes()->Count() > 1 || ( pBaseEntity->GetDamageTypes()->Count() && pBaseEntity->GetDamageTypes()->Element(0) != DMG_GENERIC) )
+#else
 	if (pBaseEntity->GetDamageType() != DMG_GENERIC)
+#endif
 	{
 		GameRules()->WeaponTraceEntity( pBaseEntity, vecAbsStart, vecAbsEnd, mask, ptr );
 	}

@@ -246,9 +246,17 @@ float ReadDamageTable( impactentry_t *pTable, int tableCount, float impulse, boo
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, const impactdamagetable_t &table, float energyScale, bool allowStaticDamage, CUtlVector<int> *damageType, bool bDamageFromHeldObjects )
+#else
 float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, const impactdamagetable_t &table, float energyScale, bool allowStaticDamage, int &damageType, bool bDamageFromHeldObjects )
+#endif
 {
+#ifdef OFFSHORE_DLL
+	damageType->AddToTail(DMG_CRUSH);
+#else
 	damageType = DMG_CRUSH;
+#endif
 	int otherIndex = !index;
 
 	// UNDONE: Expose a flag for self-inflicted damage?  Can't think of a valid case so far.
@@ -273,7 +281,11 @@ float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, co
 	if ( ( pEvent->pObjects[otherIndex]->GetGameFlags() & FVPHYSICS_DMG_DISSOLVE ) && 
 			!pEvent->pEntities[index]->IsEFlagSet(EFL_NO_DISSOLVE) )
 	{
+#ifdef OFFSHORE_DLL
+		damageType->AddToTail(DMG_DISSOLVE);
+#else
 		damageType |= DMG_DISSOLVE;
+#endif
 		return 1000;
 	}
 
@@ -393,7 +405,11 @@ float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, co
 		if ( damage > 0 )
 		{
 //			Msg("Spin : %.1f, Damage %.0f\n", FastSqrt(angularMom), damage );
+#ifdef OFFSHORE_DLL
+			damageType->AddToTail(DMG_SLASH);
+#else
 			damageType |= DMG_SLASH;
+#endif
 		}
 	}
 	
@@ -462,7 +478,11 @@ float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, co
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+float CalculateDefaultPhysicsDamage( int index, gamevcollisionevent_t *pEvent, float energyScale, bool allowStaticDamage, CUtlVector<int> *damageType, string_t iszDamageTableName, bool bDamageFromHeldObjects )
+#else
 float CalculateDefaultPhysicsDamage( int index, gamevcollisionevent_t *pEvent, float energyScale, bool allowStaticDamage, int &damageType, string_t iszDamageTableName, bool bDamageFromHeldObjects )
+#endif
 {
 	// If we have a specified damage table, find it and use it instead
 	if ( iszDamageTableName != NULL_STRING )

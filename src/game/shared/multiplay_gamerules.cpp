@@ -115,6 +115,130 @@ bool CMultiplayRules::IsMultiplayer( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CMultiplayRules::Damage_GetTimeBased(CUtlVector<int> *hDamageType)
+{
+	int iToAdd[] = {DMG_PARALYZE, DMG_NERVEGAS, DMG_POISON, DMG_RADIATION, DMG_DROWNRECOVER, DMG_ACID, DMG_SLOWBURN};
+	hDamageType->AddMultipleToTail(sizeof(iToAdd), iToAdd);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMultiplayRules::Damage_GetShouldGibCorpse( CUtlVector<int> *hDamageType )
+{
+	int iToAdd[] = { DMG_CRUSH, DMG_FALL, DMG_BLAST, DMG_SONIC, DMG_CLUB };
+	hDamageType->AddMultipleToTail(sizeof(iToAdd), iToAdd);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMultiplayRules::Damage_GetShowOnHud( CUtlVector<int> *hDamageType )
+{
+	int iToAdd[] = { DMG_POISON, DMG_ACID, DMG_DROWN, DMG_BURN, DMG_SLOWBURN, DMG_NERVEGAS, DMG_RADIATION, DMG_SHOCK };
+	hDamageType->AddMultipleToTail(sizeof(iToAdd), iToAdd);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMultiplayRules::Damage_GetNoPhysicsForce( CUtlVector<int> *hDamageType )
+{
+	Damage_GetTimeBased(hDamageType);
+	int iToAdd[] = { DMG_FALL, DMG_BURN, DMG_PLASMA, DMG_DROWN, DMG_CRUSH, DMG_PHYSGUN, DMG_PREVENT_PHYSICS_FORCE };
+	hDamageType->AddMultipleToTail(sizeof(iToAdd), iToAdd);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CMultiplayRules::Damage_GetShouldNotBleed( CUtlVector<int> *hDamageType )
+{
+	int iToAdd[] = { DMG_POISON, DMG_ACID };
+	hDamageType->AddMultipleToTail(sizeof(iToAdd), iToAdd);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : iDmgType - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CMultiplayRules::Damage_IsTimeBased( CUtlVector<int> *hDamageType )
+{
+	// Damage types that are time-based.
+	return hDamageType->Find(DMG_PARALYZE) 
+	|| hDamageType->Find(DMG_NERVEGAS) 
+	|| hDamageType->Find(DMG_POISON) 
+	|| hDamageType->Find(DMG_RADIATION) 
+	|| hDamageType->Find(DMG_DROWNRECOVER) 
+	|| hDamageType->Find(DMG_ACID)
+	|| hDamageType->Find(DMG_SLOWBURN);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : iDmgType - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CMultiplayRules::Damage_ShouldGibCorpse( CUtlVector<int> *hDamageType )
+{
+	// Damage types that gib the corpse.
+	return hDamageType->Find(DMG_CRUSH)
+		|| hDamageType->Find(DMG_FALL)
+		|| hDamageType->Find(DMG_BLAST)
+		|| hDamageType->Find(DMG_SONIC)
+		|| hDamageType->Find(DMG_CLUB);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : iDmgType - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CMultiplayRules::Damage_ShowOnHUD( CUtlVector<int> *hDamageType )
+{
+	// Damage types that have client HUD art.
+	return hDamageType->Find(DMG_POISON)
+		|| hDamageType->Find(DMG_ACID)
+		|| hDamageType->Find(DMG_DROWN)
+		|| hDamageType->Find(DMG_BURN)
+		|| hDamageType->Find(DMG_SLOWBURN)
+		|| hDamageType->Find(DMG_NERVEGAS)
+		|| hDamageType->Find(DMG_RADIATION)
+		|| hDamageType->Find(DMG_SHOCK);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : iDmgType - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CMultiplayRules::Damage_NoPhysicsForce( CUtlVector<int> *hDamageType )
+{
+	// Damage types that don't have to supply a physics force & position.
+	return hDamageType->Find(DMG_FALL)
+		|| hDamageType->Find(DMG_BURN)
+		|| hDamageType->Find(DMG_PLASMA)
+		|| hDamageType->Find(DMG_DROWN)
+		|| Damage_IsTimeBased(hDamageType)
+		|| hDamageType->Find(DMG_CRUSH)
+		|| hDamageType->Find(DMG_PHYSGUN)
+		|| hDamageType->Find(DMG_PREVENT_PHYSICS_FORCE);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : iDmgType - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CMultiplayRules::Damage_ShouldNotBleed( CUtlVector<int> *hDamageType )
+{
+	// Damage types that don't make the player bleed.
+	return hDamageType->Find(DMG_POISON)
+		|| hDamageType->Find(DMG_ACID);
+}
+#else
 int CMultiplayRules::Damage_GetTimeBased( void )
 {
 	int iDamage = ( DMG_PARALYZE | DMG_NERVEGAS | DMG_POISON | DMG_RADIATION | DMG_DROWNRECOVER | DMG_ACID | DMG_SLOWBURN );
@@ -213,7 +337,7 @@ bool CMultiplayRules::Damage_ShouldNotBleed( int iDmgType )
 	// Damage types that don't make the player bleed.
 	return ( ( iDmgType & ( DMG_POISON | DMG_ACID ) ) != 0 );
 }
-
+#endif
 //*********************************************************
 // Rules for the half-life multiplayer game.
 //*********************************************************

@@ -672,6 +672,17 @@ void CTriggerHurt::Spawn( void )
 		SetNextThink( gpGlobals->curtime + random->RandomFloat(0.0, 0.5) );
 	}
 
+#ifdef OFFSHORE_DLL
+	// TODO: THIS IS A HORRIBLE HACK
+	// Leave it as a legacy option
+	//  but DEFINITELY add a proper way to support all damage types - Kay
+	for( int i = 0; i < DMG_COUNT; i++ )
+	{ 
+		if( m_bitsDamageInflict & ( 1 << i ) )
+			m_hDamageInflict.AddToTail(i);
+	}
+#endif
+
 	if ( TheNavMesh )
 	{
 		SetContextThink( &CTriggerHurt::NavThink, gpGlobals->curtime, "NavContext" );
@@ -699,7 +710,11 @@ void CTriggerHurt::NavThink( void )
 	CollisionProp()->WorldSpaceAABB( &extent.lo, &extent.hi );
 	extent.lo.z -= HumanHeight;
 
+#ifdef OFFSHORE_DLL
+	if ( m_hDamageInflict.HasElement(DMG_BURN) )
+#else
 	if ( m_bitsDamageInflict & DMG_BURN )
+#endif
 	{
 		const float DangerBloat = HalfHumanWidth;
 		Vector dangerBloat( DangerBloat, DangerBloat, 0 );
@@ -759,7 +774,11 @@ bool CTriggerHurt::HurtEntity( CBaseEntity *pOther, float damage )
 
 	if ( damage < 0 )
 	{
+#ifdef OFFSHORE_DLL
+		pOther->TakeHealth( -damage, &m_hDamageInflict );
+#else
 		pOther->TakeHealth( -damage, m_bitsDamageInflict );
+#endif
 	}
 	else
 	{
@@ -770,7 +789,11 @@ bool CTriggerHurt::HurtEntity( CBaseEntity *pOther, float damage )
 		Vector vecDamagePos;
 		pOther->CollisionProp()->CalcNearestPoint( vecCenter, &vecDamagePos );
 
+#ifdef OFFSHORE_DLL
+		CTakeDamageInfo info( this, this, damage, &m_hDamageInflict );
+#else
 		CTakeDamageInfo info( this, this, damage, m_bitsDamageInflict );
+#endif
 		info.SetDamagePosition( vecDamagePos );
 		if ( !m_bNoDmgForce )
 		{

@@ -322,14 +322,22 @@ void CBreakableSurface::SurfaceTouch( CBaseEntity *pOther )
 //------------------------------------------------------------------------------
 int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
 {
+#ifdef OFFSHORE_DLL
+	if ( !m_bIsBroken && info.GetDamageTypes()->HasElement(DMG_CRUSH) )
+#else
 	if ( !m_bIsBroken && info.GetDamageType() == DMG_CRUSH )
+#endif
 	{
 		// physics will kill me now
 		Die( info.GetAttacker(), info.GetDamageForce() );
 		return 0;
 	}
 
+#ifdef OFFSHORE_DLL
+	if ( m_nSurfaceType == SHATTERSURFACE_GLASS && info.GetDamageTypes()->HasElement(DMG_BLAST) )
+#else
 	if ( m_nSurfaceType == SHATTERSURFACE_GLASS && info.GetDamageType() & DMG_BLAST )
+#endif
 	{
 		Vector vecDir = info.GetInflictor()->GetAbsOrigin() - WorldSpaceCenter();
 		VectorNormalize( vecDir );
@@ -338,7 +346,11 @@ int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
 	}
 
 	// Accept slash damage, too. Manhacks and such.
+#ifdef OFFSHORE_DLL
+	if ( m_nSurfaceType == SHATTERSURFACE_GLASS && info.GetDamageTypes()->HasElement(DMG_SLASH) )
+#else
 	if ( m_nSurfaceType == SHATTERSURFACE_GLASS && (info.GetDamageType() & DMG_SLASH) )
+#endif
 	{
 		Die( info.GetAttacker(), info.GetDamageForce() );
 		return 0;
@@ -372,7 +384,11 @@ void CBreakableSurface::TraceAttack( const CTakeDamageInfo &info, const Vector &
 		Die( info.GetAttacker(), vSurfDir );
 	}
 
+#ifdef OFFSHORE_DLL
+	if (info.GetDamageTypes()->HasElement(DMG_BULLET) || info.GetDamageTypes()->HasElement(DMG_CLUB))
+#else
 	if (info.GetDamageType() & (DMG_BULLET | DMG_CLUB))
+#endif
 	{
 		// Figure out which panel has taken the damage and break it
 		float flWidth,flHeight;
@@ -431,7 +447,11 @@ void CBreakableSurface::TraceAttack( const CTakeDamageInfo &info, const Vector &
 			}
 		}
 	}
+#ifdef OFFSHORE_DLL
+	else if (info.GetDamageTypes()->HasElement(DMG_SONIC) || info.GetDamageTypes()->HasElement(DMG_BLAST))
+#else
 	else if (info.GetDamageType() & (DMG_SONIC | DMG_BLAST))
+#endif
 	{
 		// ----------------------------------------
 		// If it's tile blow out nearby tiles
@@ -1199,7 +1219,12 @@ void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 {
 	if ( !m_bIsBroken )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType;
+		CUtlVector<int> *damageType = &hDamageType;
+#else
 		int damageType = 0;
+#endif
 		string_t iszDamageTable = ( ( m_nSurfaceType == SHATTERSURFACE_GLASS ) ? ( "glass" ) : ( NULL_STRING ) );
 		bool bDamageFromHeldObjects = ( ( m_spawnflags & SF_BREAKABLESURF_DAMAGE_FROM_HELD_OBJECTS ) != 0 );
 		float damage = CalculateDefaultPhysicsDamage( index, pEvent, 1.0, false, damageType, iszDamageTable, bDamageFromHeldObjects );
@@ -1245,7 +1270,12 @@ void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 					data.m_vOrigin = tr.endpos;
 					data.m_vStart = tr.startpos;
 					data.m_nSurfaceProp = tr.surface.surfaceProps;
+#ifdef OFFSHORE_DLL
+					// Should be empty at this point so lets hope this doesnt mess anything up - Kay
+					data.m_hDamageType.AddToTail(DMG_CLUB);
+#else
 					data.m_nDamageType = DMG_CLUB;
+#endif
 					data.m_nHitBox = tr.hitbox;
 					data.m_nEntIndex = entindex();
 

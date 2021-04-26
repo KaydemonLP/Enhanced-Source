@@ -38,7 +38,7 @@
 #define IN_GRENADE2		(1 << 24)	// grenade 2
 #define	IN_LOOKSPIN		(1 << 25)
 
-
+#define IN_BUTTON_COUNT 25 + 1
 
 #ifdef INFESTED_DLL
 #define IN_CURRENT_ABILITY (1 << 22)		// overloading BULLRUSH

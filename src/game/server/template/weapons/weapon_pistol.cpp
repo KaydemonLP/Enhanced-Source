@@ -253,7 +253,6 @@ void CWeaponPistol::PrimaryAttack( void )
 	// Add an accuracy penalty which can move past our maximum penalty time if we're really spastic
 	m_flAccuracyPenalty += PISTOL_ACCURACY_SHOT_PENALTY_TIME;
 
-	m_iPrimaryAttacks++;
 	gamestats->Event_WeaponFired( pOwner, true, GetClassname() );
 }
 
@@ -354,7 +353,6 @@ bool CWeaponPistol::Reload( void )
 	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
-	m_bDelayFire = true;
 
 	return fRet;
 }

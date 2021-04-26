@@ -2,9 +2,80 @@
 #include "sdk_player_shared.h"
 #include "of_shared_schemas.h"
 #include "in_buttons.h"
-
+#include "of_weaponbase.h"
+#ifdef GAME_DLL
+#include "te_effect_dispatch.h"
+#include "basetempentity.h"
+#else
+#include "c_te_effect_dispatch.h"
+#include "c_basetempentity.h"
+#endif
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+
+
+// -------------------------------------------------------------------------------- //
+// Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
+// -------------------------------------------------------------------------------- //
+
+#ifdef CLIENT_DLL
+#define CBaseTempEntity C_BaseTempEntity
+#define CTEPlayerAnimEvent C_TEPlayerAnimEvent
+#endif
+
+class CTEPlayerAnimEvent : public CBaseTempEntity
+{
+public:
+	DECLARE_CLASS( CTEPlayerAnimEvent, CBaseTempEntity );
+	DECLARE_NETWORKCLASS();
+
+#ifdef GAME_DLL
+	CTEPlayerAnimEvent( const char *name ) : CBaseTempEntity( name )
+	{
+	}
+#else
+	virtual void PostDataUpdate( DataUpdateType_t updateType )
+	{
+		// Create the effect.
+		C_SDKPlayer *pPlayer = dynamic_cast< C_SDKPlayer* >( m_hPlayer.Get() );
+		if ( pPlayer && !pPlayer->IsDormant() )
+		{
+			pPlayer->DoAnimationEvent( (PlayerAnimEvent_t)m_iEvent.Get(), m_nData );
+		}	
+	}
+#endif
+	CNetworkHandle( CBasePlayer, m_hPlayer );
+	CNetworkVar( int, m_iEvent );
+	CNetworkVar( int, m_nData );
+};
+
+IMPLEMENT_NETWORKCLASS_ALIASED( TEPlayerAnimEvent, DT_TEPlayerAnimEvent )
+
+BEGIN_NETWORK_TABLE_NOBASE( CTEPlayerAnimEvent, DT_TEPlayerAnimEvent )
+#ifdef GAME_DLL
+	SendPropEHandle( SENDINFO( m_hPlayer ) ),
+	SendPropInt( SENDINFO( m_iEvent ), Q_log2( PLAYERANIMEVENT_COUNT ) + 1, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_nData ), 32 )
+#else
+	RecvPropEHandle( RECVINFO( m_hPlayer ) ),
+	RecvPropInt( RECVINFO( m_iEvent ) ),
+	RecvPropInt( RECVINFO( m_nData ) )
+#endif
+END_NETWORK_TABLE()
+
+#ifdef GAME_DLL
+static CTEPlayerAnimEvent g_TEPlayerAnimEvent( "PlayerAnimEvent" );
+
+void TE_PlayerAnimEvent( CBasePlayer *pPlayer, PlayerAnimEvent_t event, int nData )
+{
+	CPVSFilter filter( (const Vector&)pPlayer->EyePosition() );
+	
+	g_TEPlayerAnimEvent.m_hPlayer = pPlayer;
+	g_TEPlayerAnimEvent.m_iEvent = event;
+	g_TEPlayerAnimEvent.m_nData = nData;
+	g_TEPlayerAnimEvent.Create( filter, 0 );
+};
+#endif
 
 BEGIN_NETWORK_TABLE_NOBASE( walldata_t, DT_PlayerWallData )
 #if !defined( CLIENT_DLL )
@@ -74,6 +145,8 @@ END_PREDICTION_DATA()
 
 #endif
 
+ConVar sv_showimpacts("sv_showimpacts", "0", FCVAR_REPLICATED, "Shows client (red) and server (blue) bullet impact point" );
+
 extern ConVar sv_slidespeed;
 
 CSDKPlayerShared::CSDKPlayerShared()
@@ -106,7 +179,7 @@ void CSDKPlayerShared::OnHitWall( trace_t *trTrace )
 
 float CSDKPlayerShared::GetWallJumpTime()
 {
-	return GetClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flWallJumpTime;
+	return ClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flWallJumpTime;
 }
 
 void CSDKPlayerShared::SetGrappledWall( Vector *vecNormal, Vector *vecPos, CBaseEntity *pEnt )
@@ -155,7 +228,7 @@ float CSDKPlayerShared::GetSpeedMultiplier()
 	float flSpeed = 1;
 
 	if( Sprinting() )
-		flSpeed *= GetClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flSprintMultiplier;
+		flSpeed *= ClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flSprintMultiplier;
 
 
 	return flSpeed;
@@ -164,7 +237,7 @@ float CSDKPlayerShared::GetSpeedMultiplier()
 bool CSDKPlayerShared::Sprinting()
 {
 	// Don't sprint if ya can't sprint
-	if( GetClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flSprintMultiplier == 1.0f )
+	if( ClassManager()->m_hClassInfo[m_pOuter->GetClassNumber()].flSprintMultiplier == 1.0f )
 		return false;
 
 	// Can't move fast if we're ducking
@@ -268,4 +341,170 @@ const QAngle &CSDKPlayer::EyeAngles(void)
 		return pl.v_angle;
 
 	return BaseClass::EyeAngles();
+}
+
+CBaseSDKCombatWeapon* CSDKPlayer::SDKAnim_GetActiveWeapon()
+{
+	return GetActiveSDKWeapon();
+}
+
+
+bool CSDKPlayer::SDKAnim_CanMove()
+{
+	return true;
+}
+
+
+void CSDKPlayer::FireBullet( 
+						   Vector vecSrc,	// shooting postion
+						   const QAngle &shootAngles,  //shooting angle
+						   float vecSpread, // spread vector
+						   int iDamage, // base damage
+						   int iBulletType, // ammo type
+						   CBaseEntity *pevAttacker, // shooter
+						   bool bDoEffects,	// create impact effect ?
+						   float x,	// spread x factor
+						   float y	// spread y factor
+						   )
+{
+	float fCurrentDamage = iDamage;   // damage of the bullet at it's current trajectory
+	float flCurrentDistance = 0.0;  //distance that the bullet has traveled so far
+
+	Vector vecDirShooting, vecRight, vecUp;
+	AngleVectors( shootAngles, &vecDirShooting, &vecRight, &vecUp );
+
+	if ( !pevAttacker )
+		pevAttacker = this;  // the default attacker is ourselves
+
+	// add the spray 
+	Vector vecDir = vecDirShooting +
+		x * vecSpread * vecRight +
+		y * vecSpread * vecUp;
+
+	VectorNormalize( vecDir );
+
+	float flMaxRange = 8000;
+
+	Vector vecEnd = vecSrc + vecDir * flMaxRange; // max bullet range is 10000 units
+
+	trace_t tr; // main enter bullet trace
+
+	UTIL_TraceLine( vecSrc, vecEnd, MASK_SOLID|CONTENTS_DEBRIS|CONTENTS_HITBOX, this, COLLISION_GROUP_NONE, &tr );
+
+		if ( tr.fraction == 1.0f )
+			return; // we didn't hit anything, stop tracing shoot
+
+	if ( sv_showimpacts.GetBool() )
+	{
+#ifdef CLIENT_DLL
+		// draw red client impact markers
+		debugoverlay->AddBoxOverlay( tr.endpos, Vector(-2,-2,-2), Vector(2,2,2), QAngle( 0, 0, 0), 255,0,0,127, 4 );
+
+		if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		{
+			C_BasePlayer *player = ToBasePlayer( tr.m_pEnt );
+			player->DrawClientHitboxes( 4, true );
+		}
+#else
+		// draw blue server impact markers
+		NDebugOverlay::Box( tr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,0,255,127, 4 );
+
+		if ( tr.m_pEnt && tr.m_pEnt->IsPlayer() )
+		{
+			CBasePlayer *player = ToBasePlayer( tr.m_pEnt );
+			player->DrawServerHitboxes( 4, true );
+		}
+#endif
+	}
+
+		//calculate the damage based on the distance the bullet travelled.
+		flCurrentDistance += tr.fraction * flMaxRange;
+
+		// damage get weaker of distance
+		fCurrentDamage *= pow ( 0.85f, (flCurrentDistance / 500));
+
+		CUtlVector<int> hDamageType;
+		hDamageType.AddToTail( DMG_BULLET );
+		hDamageType.AddToTail( DMG_NEVERGIB );
+
+		if( bDoEffects )
+		{
+			// See if the bullet ended up underwater + started out of the water
+			if ( enginetrace->GetPointContents( tr.endpos ) & (CONTENTS_WATER|CONTENTS_SLIME) )
+			{	
+				trace_t waterTrace;
+				UTIL_TraceLine( vecSrc, tr.endpos, (MASK_SHOT|CONTENTS_WATER|CONTENTS_SLIME), this, COLLISION_GROUP_NONE, &waterTrace );
+
+				if( waterTrace.allsolid != 1 )
+				{
+					CEffectData	data;
+					data.m_vOrigin = waterTrace.endpos;
+					data.m_vNormal = waterTrace.plane.normal;
+					data.m_flScale = random->RandomFloat( 8, 12 );
+
+					if ( waterTrace.contents & CONTENTS_SLIME )
+					{
+						data.m_fFlags |= FX_WATER_IN_SLIME;
+					}
+
+					DispatchEffect( "gunshotsplash", data );
+				}
+			}
+			else
+			{
+				//Do Regular hit effects
+
+				// Don't decal nodraw surfaces
+				if ( !( tr.surface.flags & (SURF_SKY|SURF_NODRAW|SURF_HINT|SURF_SKIP) ) )
+				{
+//					CBaseEntity *pEntity = tr.m_pEnt;
+//					if ( !( !friendlyfire.GetBool() && pEntity && pEntity->IsPlayer() && pEntity->GetTeamNumber() == GetTeamNumber() ) )
+					{
+						UTIL_ImpactTrace( &tr, &hDamageType );
+					}
+				}
+			}
+		} // bDoEffects
+
+		// add damage to entity that we hit
+
+#ifdef GAME_DLL
+		ClearMultiDamage();
+
+		CTakeDamageInfo info( pevAttacker, pevAttacker, fCurrentDamage, &hDamageType );
+		CalculateBulletDamageForce( &info, iBulletType, vecDir, tr.endpos );
+		tr.m_pEnt->DispatchTraceAttack( info, vecDir, &tr );
+
+		TraceAttackToTriggers( info, tr.startpos, tr.endpos, vecDir );
+
+		ApplyMultiDamage();
+#endif
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns weapon if already owns a weapon of this class
+//-----------------------------------------------------------------------------
+CBaseCombatWeapon* CSDKPlayer::Weapon_OwnsThisType( const char *pszWeapon, int iSubType ) const
+{
+	for ( int i = 0; i < MAX_WEAPONS; i++ ) 
+	{
+		if( m_hMyWeapons[i].Get() && FStrEq( pszWeapon, m_hMyWeapons[i]->GetSchemaName() ) )
+		{
+			// Make sure it matches the subtype
+			if ( m_hMyWeapons[i]->GetSubType() == iSubType )
+			{
+				return m_hMyWeapons[i];
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void CSDKPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
+{
+	m_PlayerAnimState->DoAnimationEvent( event, nData );
+#ifdef GAME_DLL
+	TE_PlayerAnimEvent( this, event, nData );	// Send to any clients who can see this guy.
+#endif
 }

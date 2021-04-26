@@ -7,6 +7,7 @@
 #include "sdk_shareddefs.h"
 #include "of_weaponbase.h"
 #include "sdk_playerclass_shared.h"
+#include "of_playeranimstate.h"
 
 //-----NonOptional Defines-----
 // Pretty much values here can be changed.
@@ -28,6 +29,135 @@
 #define	WEAPON_PRIMARY_SLOT			2
 #define	WEAPON_EXPLOSIVE_SLOT		3
 #define	WEAPON_TOOL_SLOT			4
+
+// -----------------------------
+// Purpoise: Special class used for Bucket index saving and searching
+// -----------------------------
+class CBucketIndex
+{
+public:
+	CBucketIndex()
+	{
+		slot = 0;
+		pos = 0;
+	}
+
+	CBucketIndex( int iSlot, int iPos )
+	{
+		slot = iSlot;
+		pos = iPos;
+	}
+
+	bool operator==(const CBucketIndex& v) const;
+	bool operator!=(const CBucketIndex& v) const;
+	bool operator<(const CBucketIndex& v) const;
+	bool operator<=(const CBucketIndex& v) const;
+	bool operator>(const CBucketIndex& v) const;
+	bool operator>=(const CBucketIndex& v) const;
+
+	// arithmetic operations
+	CBucketIndex&	operator+=(const CBucketIndex &v);
+	CBucketIndex&	operator-=(const CBucketIndex &v);
+	CBucketIndex&	operator*=(const CBucketIndex &v);
+	CBucketIndex&	operator*=(float s);
+	CBucketIndex&	operator/=(const CBucketIndex &v);
+	CBucketIndex&	operator/=(float s);
+
+	CBucketIndex&	operator=(const CBucketIndex &vOther);
+
+public:
+	int slot;
+	int pos;
+};
+
+inline CBucketIndex& CBucketIndex::operator=(const CBucketIndex &vOther)	
+{
+	Assert( vOther.IsValid() );
+	slot = vOther.slot; pos = vOther.pos;
+	return *this; 
+}
+
+inline bool CBucketIndex::operator==( const CBucketIndex& src ) const
+{
+	Assert( src.IsValid() && IsValid() );
+	return (src.slot == slot) && (src.pos == pos);
+}
+
+inline bool CBucketIndex::operator!=( const CBucketIndex& src ) const
+{
+	Assert( src.IsValid() && IsValid() );
+	return (src.slot != slot) || (src.pos != pos);
+}
+
+inline bool CBucketIndex::operator<( const CBucketIndex& src ) const
+{
+	Assert( src.IsValid() && IsValid() );
+	return (slot < src.slot) || (slot == src.slot && pos < src.pos);
+}
+
+inline bool CBucketIndex::operator<=( const CBucketIndex& src ) const
+{
+	return !( src < *this );
+}
+
+inline bool CBucketIndex::operator>( const CBucketIndex& src ) const
+{
+	return src < *this;
+}
+
+inline bool CBucketIndex::operator>=( const CBucketIndex& src ) const
+{
+	return !( *this < src );
+}
+
+inline CBucketIndex& CBucketIndex::operator+=(const CBucketIndex& v)	
+{ 
+	Assert( IsValid() && v.IsValid() );
+	slot+=v.slot; pos+=v.pos;	
+	return *this;
+}
+
+inline CBucketIndex& CBucketIndex::operator-=(const CBucketIndex& v)	
+{ 
+	Assert( IsValid() && v.IsValid() );
+	slot-=v.slot; pos-=v.pos;	
+	return *this;
+}
+
+inline CBucketIndex& CBucketIndex::operator*=(float fl)	
+{
+	slot *= fl;
+	pos *= fl;
+	Assert( IsValid() );
+	return *this;
+}
+
+inline CBucketIndex& CBucketIndex::operator*=(const CBucketIndex& v)	
+{ 
+	slot *= v.slot;
+	pos *= v.pos;
+	Assert( IsValid() );
+	return *this;
+}
+
+inline CBucketIndex& CBucketIndex::operator/=(float fl)	
+{
+	Assert( fl != 0.0f );
+	float oofl = 1.0f / fl;
+	slot *= oofl;
+	pos *= oofl;
+	Assert( IsValid() );
+	return *this;
+}
+
+inline CBucketIndex& CBucketIndex::operator/=(const CBucketIndex& v)	
+{ 
+	Assert( v.slot != 0.0f && v.pos != 0.0f );
+	slot /= v.slot;
+	pos /= v.pos;
+	Assert( IsValid() );
+	return *this;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Used to relay outputs/inputs from the player to the world and viceversa
@@ -68,7 +198,7 @@ public:
 	EHANDLE m_hPlayer;
 };
 
-class CSDKPlayer : public CBasePlayer
+class CSDKPlayer : public CBasePlayer, public ISDKPlayerAnimStateHelpers
 {
 public:
 	DECLARE_CLASS( CSDKPlayer, CBasePlayer );
@@ -163,9 +293,12 @@ public:
 
 	// Viewmodel + Weapon
 	virtual void CreateViewModel( int index );
+	virtual bool Weapon_Detach( CBaseCombatWeapon *pWeapon );		// Clear any pointers to the weapon.
 	virtual void Weapon_Equip ( CBaseCombatWeapon *pWeapon );
 	virtual bool Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex = 0);
 	virtual bool BumpWeapon( CBaseCombatWeapon *pWeapon );
+	virtual CBaseCombatWeapon *GetWeaponInSlot( int iSlot, int iPos );
+	virtual void RemoveWeaponFromSlots( CBaseCombatWeapon *pWeapon );
 	CNetworkVar( int, m_iShotsFired );	// number of shots fired recently
 
 	//Walking
@@ -202,9 +335,10 @@ public:
 	//void FireBullets ( const FireBulletsInfo_t &info );
 
 	// CHEAT
-	virtual void CheatImpulseCommands( int iImpulse );
-	virtual void GiveAllItems( void );
-	virtual void GiveDefaultItems( void );
+	virtual void			CheatImpulseCommands( int iImpulse );
+	virtual void			GiveAllItems( void );
+	virtual void			GiveDefaultItems( void );
+	virtual CBaseEntity		*GiveNamedItem( const char *szName, int iSubType = 0, bool removeIfNotCarried = true );
 
 	// Hints
 	virtual void HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOverrideClientSettings = false, bool bQuiet = false ); // Displays a hint message to the player
@@ -229,9 +363,16 @@ public:
 	Class_T Classify ( void );
 
 	// Shared Functions
-	virtual const QAngle &EyeAngles();
+	virtual const QAngle &EyeAngles(); 
 
 public:
+	// ISDKPlayerAnimState overrides.
+	virtual CBaseSDKCombatWeapon* SDKAnim_GetActiveWeapon();
+	virtual bool SDKAnim_CanMove();
+	void DoAnimationEvent( PlayerAnimEvent_t event, int nData = 0 );
+
+	virtual CBaseCombatWeapon*	Weapon_OwnsThisType( const char *pszWeapon, int iSubType = 0 ) const;  // True if already owns a weapon of this class
+
 	void FireBullet( 
 		Vector vecSrc, 
 		const QAngle &shootAngles, 
@@ -253,6 +394,18 @@ private:
 		bool				m_bWelcome;
 
 		CNetworkVar( int, m_iClassNumber );
+		
+		CNetworkQAngle( m_angEyeAngles );
+		
+		void CreateRagdollEntity();
+
+		ISDKPlayerAnimState *m_PlayerAnimState;
+
+		// Tracks our ragdoll entity.
+		CNetworkHandle( CBaseEntity, m_hRagdoll );	// networked entity handle
+
+		//	KEY, ELEMENT
+		CUtlMap< CBucketIndex, CBaseCombatWeapon *> m_hWeaponSlots;
 
 protected:
 		virtual void		ItemPostFrame();

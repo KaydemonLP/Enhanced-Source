@@ -1766,7 +1766,11 @@ void CBaseEntity::Activate( void )
 
 // give health. 
 // Returns the amount of health actually taken.
+#ifdef OFFSHORE_DLL
+int	CBaseEntity::TakeHealth( float flHealth, CUtlVector<int> *hDamageType )
+#else
 int CBaseEntity::TakeHealth( float flHealth, int bitsDamageType )
+#endif
 {
 	if ( !edict() || m_takedamage < DAMAGE_YES )
 		return 0;
@@ -1861,9 +1865,13 @@ void CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 {
 	if ( !g_pGameRules )
 		return;
-
+#ifdef OFFSHORE_DLL
+	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( inputInfo.GetDamageTypes() );
+	if ( bHasPhysicsForceDamage && !inputInfo.GetDamageTypes()->HasElement(DMG_GENERIC) )
+#else
 	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( inputInfo.GetDamageType() );
 	if ( bHasPhysicsForceDamage && inputInfo.GetDamageType() != DMG_GENERIC )
+#endif
 	{
 		// If you hit this assert, you've called TakeDamage with a damage type that requires a physics damage
 		// force & position without specifying one or both of them. Decide whether your damage that's causing 
@@ -1962,13 +1970,26 @@ float CBaseEntity::GetReceivedDamageScale( CBaseEntity *pAttacker )
 int CBaseEntity::VPhysicsTakeDamage( const CTakeDamageInfo &info )
 {
 	// don't let physics impacts or fire cause objects to move (again)
-		bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType() );
-		if ( bNoPhysicsForceDamage || info.GetDamageType() == DMG_GENERIC )
+#ifdef OFFSHORE_DLL
+		bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageTypes()	);
+
+		if ( bNoPhysicsForceDamage || (info.GetDamageTypes()->Count() == 1 && info.GetDamageTypes()->Element(0) == DMG_GENERIC) )
 			return 1;
 
 	// Bash/Shooting wants to set 0 force to not shove heavy physics props at all
+	if ( (info.GetDamageTypes()->HasElement(DMG_BULLET) || info.GetDamageTypes()->HasElement(DMG_CLUB)) && info.GetDamageForce().IsZero() )
+		return 1;
+
+#else
+	bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType()	);
+
+	if ( bNoPhysicsForceDamage || info.GetDamageType() == DMG_GENERIC )
+		return 1;
+
+		// Bash/Shooting wants to set 0 force to not shove heavy physics props at all
 	if ( (info.GetDamageType() & (DMG_BULLET | DMG_CLUB)) && info.GetDamageForce().IsZero() )
 		return 1;
+#endif
 
 	Assert(VPhysicsGetObject() != NULL);
 	if ( VPhysicsGetObject() )
@@ -2050,8 +2071,21 @@ void CBaseEntity::SendOnKilledGameEvent( const CTakeDamageInfo &info )
 		if ( info.GetInflictor())
 		{
 			event->SetInt( "entindex_inflictor", info.GetInflictor()->entindex() );
-		}		
+		}
+		
+		// SEND THIS AS A STRING!!!
+#ifdef OFFSHORE_DLL
+		char szResult[256];
+		FOR_EACH_VEC(*info.GetDamageTypes(), i)
+		{
+			if( !i )
+				UTIL_VarArgs("d%", info.GetDamageTypes()->Element(i));
+
+			UTIL_VarArgs("s% d%", szResult, info.GetDamageTypes()->Element(i));
+		}
+#else
 		event->SetInt( "damagebits", info.GetDamageType() );
+#endif
 		gameeventmanager->FireEvent( event );
 	}
 }
@@ -4884,11 +4918,17 @@ bool CBaseEntity::IsInAnyTeam( void ) const
 //-----------------------------------------------------------------------------
 // Purpose: Returns the type of damage that this entity inflicts.
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+CUtlVector<int> *CBaseEntity::GetDamageTypes() const
+{
+	return const_cast<CUtlVector<int>*>(&m_hGenericDamage);
+}
+#else
 int CBaseEntity::GetDamageType() const
 {
 	return DMG_GENERIC;
 }
-
+#endif
 
 //-----------------------------------------------------------------------------
 // process notification
@@ -8440,6 +8480,16 @@ void CC_Ent_Create( const CCommand& args )
 		else
 		{
 			entity->Precache();
+
+			// Pass in any additional parameters.
+			for ( int i = 2; i + 1 < args.ArgC(); i += 2 )
+			{
+				const char *pKeyName = args[i];
+				const char *pValue = args[i+1];
+				entity->KeyValue( pKeyName, pValue );
+			}
+
+
 			DispatchSpawn(entity);
 			// Now attempt to drop into the world
 			CBasePlayer* pPlayer = UTIL_GetCommandClient();

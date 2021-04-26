@@ -953,14 +953,24 @@ void CPropVehicleDriveable::VPhysicsCollision( int index, gamevcollisionevent_t 
 	}
 
 	// Over our skill's minimum crash level?
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType;
+	CUtlVector<int> *damageType = &hDamageType;
+#else
 	int damageType = 0;
+#endif
 	float flDamage = CalculatePhysicsImpactDamage( index, pEvent, gDefaultPlayerVehicleImpactDamageTable, 1.0, true, damageType );
 	if ( flDamage > 0 && m_flNoImpactDamageTime < gpGlobals->curtime )
 	{
 		Vector damagePos;
 		pEvent->pInternalData->GetContactPoint( damagePos );
 		Vector damageForce = pEvent->postVelocity[index] * pEvent->pObjects[index]->GetMass();
+#ifdef OFFSHORE_DLL
+		hDamageType.AddToTail(DMG_VEHICLE);
+		CTakeDamageInfo info( this, GetDriver(), damageForce, damagePos, flDamage, damageType );
+#else
 		CTakeDamageInfo info( this, GetDriver(), damageForce, damagePos, flDamage, (damageType|DMG_VEHICLE) );
+#endif
 		GetDriver()->TakeDamage( info );
 	}
 }
@@ -976,7 +986,11 @@ int CPropVehicleDriveable::VPhysicsGetObjectList( IPhysicsObject **pList, int li
 void CPropVehicleDriveable::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	// If we've just been zapped by the physcannon, try and right ourselves
-	if ( info.GetDamageType() & DMG_PHYSGUN )
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_PHYSGUN) )
+#else
+	if ( info.GetDamageTypes() & DMG_PHYSGUN )
+#endif
 	{
 		float flUprightStrength = GetUprightStrength();
 		if ( flUprightStrength )

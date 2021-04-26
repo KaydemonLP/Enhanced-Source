@@ -990,7 +990,11 @@ void CFire::Update( float simTime )
 			damage = true;
 		}
 	}
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail((m_nFireType == FIRE_NATURAL) ? DMG_BURN : DMG_PLASMA);
+#else
 	int damageFlags = (m_nFireType == FIRE_NATURAL) ? DMG_BURN : DMG_PLASMA;
+#endif
 	for ( i = 0; i < nearbyCount; i++ )
 	{
 		CBaseEntity *pOther = pNearby[i];
@@ -1030,7 +1034,11 @@ void CFire::Update( float simTime )
 
 		if (tr.fraction == 1.0 && !tr.startsolid)
 		{
+#ifdef OFFSHORE_DLL
+			pOther->TakeDamage( CTakeDamageInfo( this, this, outputDamage, &hDamage ) );
+#else
 			pOther->TakeDamage( CTakeDamageInfo( this, this, outputDamage, damageFlags ) );
+#endif
 		}
 	}
 

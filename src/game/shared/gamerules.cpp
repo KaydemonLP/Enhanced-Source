@@ -514,7 +514,11 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 		// If we don't have a damage force, manufacture one
 		if ( adjustedInfo.GetDamagePosition() == vec3_origin || adjustedInfo.GetDamageForce() == vec3_origin )
 		{
+#ifdef OFFSHORE_DLL
+			if ( !( adjustedInfo.GetDamageTypes()->HasElement(DMG_PREVENT_PHYSICS_FORCE) ) )
+#else
 			if ( !( adjustedInfo.GetDamageType() & DMG_PREVENT_PHYSICS_FORCE ) )
+#endif
 			{
 				CalculateExplosiveDamageForce( &adjustedInfo, dir, vecSrc );
 			}

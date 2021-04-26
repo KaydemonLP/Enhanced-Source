@@ -83,6 +83,7 @@ private:
 	friend C_AnimationLayer Lerp_Hermite( const C_AnimationLayer& current, float flPercent, const C_AnimationLayer& prev, const C_AnimationLayer& from, const C_AnimationLayer& to );
 	friend void Lerp_Clamp( C_AnimationLayer &val );
 	friend int CheckForSequenceBoxChanges( const C_AnimationLayer& newLayer, const C_AnimationLayer& oldLayer );
+	friend class C_SDKPlayerAnimState;
 };
 
 #ifdef CLIENT_DLL

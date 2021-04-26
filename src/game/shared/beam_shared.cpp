@@ -801,18 +801,36 @@ void CBeam::BeamDamage( trace_t *ptr )
 			ClearMultiDamage();
 			Vector dir = ptr->endpos - GetAbsOrigin();
 			VectorNormalize( dir );
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamageType;
+			hDamageType.AddToTail(DMG_ENERGYBEAM);
+#else
 			int nDamageType = DMG_ENERGYBEAM;
+#endif
 
 			if (m_nDissolveType == 0)
 			{
+#ifdef OFFSHORE_DLL
+				hDamageType.AddToTail(DMG_DISSOLVE);
+#else
 				nDamageType = DMG_DISSOLVE;
+#endif
 			}
 			else if ( m_nDissolveType > 0 )
 			{
-				nDamageType = DMG_DISSOLVE | DMG_SHOCK; 
+#ifdef OFFSHORE_DLL
+				hDamageType.AddToTail(DMG_DISSOLVE);
+				hDamageType.AddToTail(DMG_SHOCK);
+#else
+				nDamageType = DMG_DISSOLVE | DMG_SHOCK;
+#endif
 			}
 
+#ifdef OFFSHORE_DLL
+			CTakeDamageInfo info( this, this, m_flDamage * (gpGlobals->curtime - m_flFireTime), &hDamageType );
+#else
 			CTakeDamageInfo info( this, this, m_flDamage * (gpGlobals->curtime - m_flFireTime), nDamageType );
+#endif
 			CalculateMeleeDamageForce( &info, dir, ptr->endpos );
 			pHit->DispatchTraceAttack( info, dir, ptr );
 			ApplyMultiDamage();

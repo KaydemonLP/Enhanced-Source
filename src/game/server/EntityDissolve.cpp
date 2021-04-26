@@ -211,7 +211,13 @@ CEntityDissolve *CEntityDissolve::Create( CBaseEntity *pTarget, const char *pMat
 		// Simply immediately kill the player.
 		CBasePlayer *pPlayer = assert_cast< CBasePlayer* >( pTarget );
 		pPlayer->SetArmorValue( 0 );
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType; 
+		hDamageType.AddToTail(DMG_GENERIC); hDamageType.AddToTail(DMG_REMOVENORAGDOLL);hDamageType.AddToTail(DMG_PREVENT_PHYSICS_FORCE);
+		CTakeDamageInfo info( pPlayer, pPlayer, pPlayer->GetHealth(), &hDamageType );
+#else
 		CTakeDamageInfo info( pPlayer, pPlayer, pPlayer->GetHealth(), DMG_GENERIC | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE );
+#endif
 		pPlayer->TakeDamage( info );
 		return NULL;
 	}
@@ -234,7 +240,14 @@ CEntityDissolve *CEntityDissolve::Create( CBaseEntity *pTarget, const char *pMat
 			if ( pTarget->m_lifeState == LIFE_ALIVE )
 			{
 				CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#ifdef OFFSHORE_DLL
+				CUtlVector<int> hDamageType;
+				hDamageType.AddToTail(DMG_SHOCK); hDamageType.AddToTail(DMG_REMOVENORAGDOLL); hDamageType.AddToTail(DMG_PREVENT_PHYSICS_FORCE);
+				CTakeDamageInfo ragdollInfo( pPlayer, pPlayer, 10000.0, &hDamageType);
+#else
 				CTakeDamageInfo ragdollInfo( pPlayer, pPlayer, 10000.0, DMG_SHOCK | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE );
+#endif
+				
 				pTarget->TakeDamage( ragdollInfo );
 			}
 
@@ -349,8 +362,14 @@ void CEntityDissolve::DissolveThink( void )
 		// Yeah, the player may have nothing to do with it, but
 		// passing NULL to TakeDamage causes bad things to happen
 		CBasePlayer *pPlayer = UTIL_PlayerByIndex( 1 );
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; g_pGameRules->Damage_GetNoPhysicsForce(&hDamage);
+		hDamage.AddToTail(DMG_GENERIC); hDamage.AddToTail(DMG_REMOVENORAGDOLL);
+		CTakeDamageInfo info( pPlayer, pPlayer, 10000.0, &hDamage );
+#else
 		int iNoPhysicsDamage = g_pGameRules->Damage_GetNoPhysicsForce();
 		CTakeDamageInfo info( pPlayer, pPlayer, 10000.0, DMG_GENERIC | DMG_REMOVENORAGDOLL | iNoPhysicsDamage );
+#endif
 		pTarget->TakeDamage( info );
 
 		if ( pTarget != pPlayer )

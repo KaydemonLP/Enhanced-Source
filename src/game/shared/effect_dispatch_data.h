@@ -55,7 +55,11 @@ public:
 
 	// Some TF2 specific things
 	int		m_nMaterial;
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> m_hDamageType;
+#else
 	int		m_nDamageType;
+#endif
 	int		m_nHitBox;
 
 	int		m_nOtherEntIndex;
@@ -85,7 +89,9 @@ public:
 		m_flRadius = 0.0f;
 
 		m_nMaterial = 0;
+#ifndef OFFSHORE_DLL
 		m_nDamageType = 0;
+#endif
 		m_nHitBox = 0;
 
 		m_nColor = 0;

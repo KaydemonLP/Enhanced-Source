@@ -781,7 +781,13 @@ void CFuncRotating::HurtTouch ( CBaseEntity *pOther )
 	// calculate damage based on rotation speed
 	m_flBlockDamage = GetLocalAngularVelocity().Length() / 10;
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage;
+	hDamage.AddToTail(DMG_CRUSH);
+	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, &hDamage ) );
+#else
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
+#endif
 
 	Vector vecNewVelocity = pOther->GetAbsOrigin() - WorldSpaceCenter();
 	VectorNormalize(vecNewVelocity);
@@ -1302,7 +1308,13 @@ void CFuncRotating::InputToggle( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CFuncRotating::Blocked( CBaseEntity *pOther )
 {
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage;
+	hDamage.AddToTail(DMG_CRUSH);
+	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, &hDamage ) );
+#else
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
+#endif
 }
 
 

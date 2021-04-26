@@ -77,8 +77,12 @@ CRagdollExplosionEnumerator::~CRagdollExplosionEnumerator()
 		tr.startpos = tr.endpos - dir;
 		// move expolsion center a bit down, so things fly higher 
 		tr.startpos.z -= 32.0f;
-
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail();
+		pModel->ImpactTrace( &tr, &hDamage, NULL );
+#else
 		pModel->ImpactTrace( &tr, DMG_BLAST, NULL );
+#endif
 	}
 }
 

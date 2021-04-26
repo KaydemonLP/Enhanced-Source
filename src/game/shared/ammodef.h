@@ -19,7 +19,11 @@ class ConVar;
 struct Ammo_t 
 {
 	char 				*pName;
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>		hDamageType;
+#else
 	int					nDamageType;
+#endif
 	int					eTracerType;
 	float				physicsForceImpulse;
 	int					nMinSplashSize;
@@ -77,22 +81,35 @@ public:
 	int					NPCDamage(int nAmmoIndex);
 	int					MaxCarry(int nAmmoIndex, const CBaseCombatCharacter *owner);
 	bool				CanCarryInfiniteAmmo(int nAmmoIndex);
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>		*DamageType(int nAmmoIndex);
+#else
 	int					DamageType(int nAmmoIndex);
+#endif
 	int					TracerType(int nAmmoIndex);
 	float				DamageForce(int nAmmoIndex);
 	int					MinSplashSize(int nAmmoIndex);
 	int					MaxSplashSize(int nAmmoIndex);
 	int					Flags(int nAmmoIndex);
 
+#ifdef OFFSHORE_DLL
+	void				AddAmmoType(char const* name, CUtlVector<int> *damageType, int tracerType, int plr_dmg, int npc_dmg, int carry, float physicsForceImpulse, int nFlags, int minSplashSize = 4, int maxSplashSize = 8 );
+	void				AddAmmoType(char const* name, CUtlVector<int> *damageType, int tracerType, char const* plr_cvar, char const* npc_var, char const* carry_cvar, float physicsForceImpulse, int nFlags, int minSplashSize = 4, int maxSplashSize = 8 );
+#else
 	void				AddAmmoType(char const* name, int damageType, int tracerType, int plr_dmg, int npc_dmg, int carry, float physicsForceImpulse, int nFlags, int minSplashSize = 4, int maxSplashSize = 8 );
 	void				AddAmmoType(char const* name, int damageType, int tracerType, char const* plr_cvar, char const* npc_var, char const* carry_cvar, float physicsForceImpulse, int nFlags, int minSplashSize = 4, int maxSplashSize = 8 );
+#endif
 	int					NumAmmoTypes() { return m_nAmmoIndex; }
 
 	CAmmoDef(void);
 	virtual ~CAmmoDef( void );
 
 private:
+#ifdef OFFSHORE_DLL
+	bool				AddAmmoType(char const* name, CUtlVector<int> *damageType, int tracerType, int nFlags, int minSplashSize, int maxSplashSize);
+#else
 	bool				AddAmmoType(char const* name, int damageType, int tracerType, int nFlags, int minSplashSize, int maxSplashSize );
+#endif
 };
 
 

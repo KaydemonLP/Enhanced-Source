@@ -514,8 +514,17 @@ void CRagdollProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	
 	if ( m_takedamage != DAMAGE_NO )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> damageType;
+#else
 		int damageType = 0;
+#endif
+
+#ifdef OFFSHORE_DLL
+		float damage = CalculateDefaultPhysicsDamage( index, pEvent, 1.0f, true, &damageType );
+#else
 		float damage = CalculateDefaultPhysicsDamage( index, pEvent, 1.0f, true, damageType );
+#endif
 		if ( damage > 0 )
 		{
 			// Take extra damage after we're punted by the physcannon
@@ -541,7 +550,11 @@ void CRagdollProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 			}
 
 			// FIXME: this doesn't pass in who is responsible if some other entity "caused" this collision
+#ifdef OFFSHORE_DLL
+			PhysCallbackDamage( this, CTakeDamageInfo( pHitEntity, pHitEntity, damageForce, damagePos, damage, &damageType ), *pEvent, index );
+#else
 			PhysCallbackDamage( this, CTakeDamageInfo( pHitEntity, pHitEntity, damageForce, damagePos, damage, damageType ), *pEvent, index );
+#endif
 		}
 	}
 
@@ -1153,7 +1166,12 @@ void CRagdollProp::FadeOutThink(void)
 		// Yeah, the player may have nothing to do with it, but
 		// passing NULL to TakeDamage causes bad things to happen
 		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+		CTakeDamageInfo info( pPlayer, pPlayer, 10000.0, &hDamage );
+#else
 		CTakeDamageInfo info( pPlayer, pPlayer, 10000.0, DMG_GENERIC );
+#endif
 		TakeDamage( info );
 		UTIL_Remove( this );
 	}
@@ -1315,8 +1333,13 @@ CBaseAnimating *CreateServerRagdollSubmodel( CBaseAnimating *pOwner, const char 
 
 CBaseEntity *CreateServerRagdoll( CBaseAnimating *pAnimating, int forceBone, const CTakeDamageInfo &info, int collisionGroup, bool bUseLRURetirement )
 {
+#ifdef OFFSHORE_DLL
+	if( info.GetDamageTypes()->HasElement(DMG_VEHICLE) || info.GetDamageTypes()->HasElement(DMG_CRUSH) )
+#else
 	if ( info.GetDamageType() & (DMG_VEHICLE|DMG_CRUSH) )
+#endif
 	{
+
 		// if the entity was killed by physics or a vehicle, move to the vphysics shadow position before creating the ragdoll.
 		SyncAnimatingWithPhysics( pAnimating );
 	}
@@ -1413,7 +1436,11 @@ CBaseEntity *CreateServerRagdoll( CBaseAnimating *pAnimating, int forceBone, con
 	pAnimating->DrawRawSkeleton( pBoneToWorldNext, BONE_USED_BY_ANYTHING, true, 20, true );
 #endif
 	// Is this a vehicle / NPC collision?
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_VEHICLE) && pAnimating->MyNPCPointer() )
+#else
 	if ( (info.GetDamageType() & DMG_VEHICLE) && pAnimating->MyNPCPointer() )
+#endif
 	{
 		// init the ragdoll with no forces
 		pRagdoll->InitRagdoll( vec3_origin, -1, vec3_origin, pBoneToWorld, pBoneToWorldNext, dt, collisionGroup, true );

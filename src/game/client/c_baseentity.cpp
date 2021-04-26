@@ -1923,9 +1923,16 @@ const Vector& C_BaseEntity::GetRenderOrigin( void )
 	return GetAbsOrigin();
 }
 
+ConVar of_angle_clamping( "of_angle_clamping", "0", FCVAR_NONE );
+ConVar of_angle_clamping_mod( "of_angle_clamping_mod", "16", FCVAR_NONE );
+
 const QAngle& C_BaseEntity::GetRenderAngles( void )
 {
-	return GetAbsAngles();
+	m_angRenderRotation = QAngle((int)((int)GetAbsAngles()[0] / of_angle_clamping_mod.GetInt()) * of_angle_clamping_mod.GetInt(),
+		(int)((int)GetAbsAngles()[1] / of_angle_clamping_mod.GetInt()) * of_angle_clamping_mod.GetInt(),
+		(int)((int)GetAbsAngles()[2] / of_angle_clamping_mod.GetInt()) * of_angle_clamping_mod.GetInt());
+
+	return of_angle_clamping.GetBool() ? m_angRenderRotation : GetAbsAngles();
 }
 
 const matrix3x4_t &C_BaseEntity::RenderableToWorldTransform()

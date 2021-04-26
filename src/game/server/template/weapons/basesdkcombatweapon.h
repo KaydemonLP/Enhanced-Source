@@ -4,13 +4,13 @@
 //
 //=============================================================================//
 
-#include "of_weaponbase.h"
-
 #ifndef BASESDKCOMBATWEAPON_H
 #define BASESDKCOMBATWEAPON_H
 #ifdef _WIN32
 #pragma once
 #endif
+
+#include "of_weaponbase.h"
 
 //=========================================================
 // Machine gun base class

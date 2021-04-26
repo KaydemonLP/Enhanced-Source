@@ -504,7 +504,11 @@ void C_PhysPropClientside::Clone( Vector &velocity )
 	}
 }
 
+#ifdef OFFSHORE_DLL
+void C_PhysPropClientside::ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName )
+#else
 void C_PhysPropClientside::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
+#endif
 {
 	VPROF( "C_PhysPropClientside::ImpactTrace" );
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
@@ -515,7 +519,11 @@ void C_PhysPropClientside::ImpactTrace( trace_t *pTrace, int iDamageType, char *
 	Vector dir = pTrace->endpos - pTrace->startpos;
 	int iDamage = 0;
 
+#ifdef OFFSHORE_DLL
+	if ( hDamageType->HasElement(DMG_BLAST) )
+#else
 	if ( iDamageType & DMG_BLAST )
+#endif
 	{
 		iDamage = VectorLength( dir );
 		dir *= 500;  // adjust impact strenght
@@ -531,7 +539,11 @@ void C_PhysPropClientside::ImpactTrace( trace_t *pTrace, int iDamageType, char *
 		VectorNormalize( dir );
 
 		// guess avg damage
+#ifdef OFFSHORE_DLL
+		if ( hDamageType->Count() == 1 && hDamageType->HasElement(DMG_BULLET) )
+#else
 		if ( iDamageType == DMG_BULLET )
+#endif
 		{
 			iDamage = 30;
 		}
@@ -550,7 +562,11 @@ void C_PhysPropClientside::ImpactTrace( trace_t *pTrace, int iDamageType, char *
 		data.m_vOrigin = pTrace->endpos;
 		data.m_vStart = pTrace->startpos;
 		data.m_nSurfaceProp = pTrace->surface.surfaceProps;
+#ifdef OFFSHORE_DLL
+		data.m_hDamageType = *hDamageType;
+#else
 		data.m_nDamageType = iDamageType;
+#endif
 		data.m_nHitBox = pTrace->hitbox;
 		data.m_hEntity = GetRefEHandle();
 

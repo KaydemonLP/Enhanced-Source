@@ -125,6 +125,21 @@ public:
 
 	virtual	bool	Init();
 
+#ifdef OFFSHORE_DLL
+	// Damage Queries - these need to be implemented by the various subclasses (single-player, multi-player, etc).
+	// The queries represent queries against damage types and properties.
+	virtual bool	Damage_IsTimeBased		( CUtlVector<int> *hDamageType ) = 0;	// Damage types that are time-based.
+	virtual bool	Damage_ShouldGibCorpse	( CUtlVector<int> *hDamageType ) = 0;	// Damage types that gib the corpse.
+	virtual bool	Damage_ShowOnHUD		( CUtlVector<int> *hDamageType ) = 0;	// Damage types that have client HUD art.
+	virtual bool	Damage_NoPhysicsForce	( CUtlVector<int> *hDamageType ) = 0;	// Damage types that don't have to supply a physics force & position.
+	virtual bool	Damage_ShouldNotBleed	( CUtlVector<int> *hDamageType ) = 0;	// Damage types that don't make the player bleed.
+
+	virtual void	Damage_GetTimeBased			( CUtlVector<int> *hDamageType ) = 0;
+	virtual void	Damage_GetShouldGibCorpse	( CUtlVector<int> *hDamageType ) = 0;
+	virtual void	Damage_GetShowOnHud			( CUtlVector<int> *hDamageType ) = 0;
+	virtual void	Damage_GetNoPhysicsForce	( CUtlVector<int> *hDamageType ) = 0;
+	virtual void	Damage_GetShouldNotBleed	( CUtlVector<int> *hDamageType ) = 0;
+#else
 	// Damage Queries - these need to be implemented by the various subclasses (single-player, multi-player, etc).
 	// The queries represent queries against damage types and properties.
 	virtual bool	Damage_IsTimeBased( int iDmgType ) = 0;			// Damage types that are time-based.
@@ -138,7 +153,7 @@ public:
 	virtual int		Damage_GetShowOnHud( void ) = 0;					
 	virtual int		Damage_GetNoPhysicsForce( void )= 0;
 	virtual int		Damage_GetShouldNotBleed( void ) = 0;
-
+#endif
 // Ammo Definitions
 	//CAmmoDef* GetAmmoDef();
 

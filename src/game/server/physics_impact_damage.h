@@ -48,10 +48,18 @@ extern impactdamagetable_t gDefaultPlayerImpactDamageTable;
 extern impactdamagetable_t gDefaultPlayerVehicleImpactDamageTable;
 
 // NOTE Default uses default NPC table
+#ifdef OFFSHORE_DLL
+float CalculateDefaultPhysicsDamage( int index, gamevcollisionevent_t *pEvent, float energyScale, bool allowStaticDamage, CUtlVector<int> *damageTypeOut, string_t iszDamageTableName = NULL_STRING, bool bDamageFromHeldObjects = false );
+#else
 float CalculateDefaultPhysicsDamage( int index, gamevcollisionevent_t *pEvent, float energyScale, bool allowStaticDamage, int &damageTypeOut, string_t iszDamageTableName = NULL_STRING, bool bDamageFromHeldObjects = false );
+#endif
 
 // use passes in the table
+#ifdef OFFSHORE_DLL
+float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, const impactdamagetable_t &table, float energyScale, bool allowStaticDamage, CUtlVector<int> *damageTypeOut, bool bDamageFromHeldObjects = false );
+#else
 float CalculatePhysicsImpactDamage( int index, gamevcollisionevent_t *pEvent, const impactdamagetable_t &table, float energyScale, bool allowStaticDamage, int &damageTypeOut, bool bDamageFromHeldObjects = false );
+#endif
 
 struct vphysics_objectstress_t
 {

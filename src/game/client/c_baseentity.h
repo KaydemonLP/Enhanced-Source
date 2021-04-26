@@ -228,11 +228,20 @@ public:
 	virtual ITraceFilter*			GetBeamTraceFilter( void );
 	virtual void					DispatchTraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 	virtual void					TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+#ifdef OFFSHORE_DLL
+	virtual void					DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType );
+#else
 	virtual void					DoImpactEffect( trace_t &tr, int nDamageType );
+#endif
 	virtual void					MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	virtual int						GetTracerAttachment( void );
 	void							ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *pVecTracerStart );
+#ifdef OFFSHORE_DLL
+	void							TraceBleed(float flDamage, const Vector &vecDir, trace_t *ptr, CUtlVector<int> *hDamageType);
+#else
 	void							TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType );
+#endif
+	
 	virtual int						BloodColor();
 	virtual const char*				GetTracerType();
 
@@ -896,9 +905,18 @@ public:
 	// the model pointer), it is done here.
 	void OnPostRestoreData();
 
+#ifdef OFFSHORE_DLL
+	virtual char const *			DamageDecal( CUtlVector<int> *hDamageType, int gameMaterial );
+#else
 	virtual char const *			DamageDecal( int bitsDamageType, int gameMaterial );
+#endif
 	virtual void					DecalTrace( trace_t *pTrace, char const *decalName );
+
+#ifdef OFFSHORE_DLL
+	virtual void					ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName );
+#else
 	virtual void					ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName );
+#endif
 
 	virtual bool					ShouldPredict( void ) { return false; };
 	// interface function pointers
@@ -1411,6 +1429,7 @@ private:
 
 	QAngle							m_vecAngVelocity;
 	QAngle							m_angAbsRotation;
+	QAngle							m_angRenderRotation;
 	QAngle							m_angRotation;
 
 	float							m_flGravity;

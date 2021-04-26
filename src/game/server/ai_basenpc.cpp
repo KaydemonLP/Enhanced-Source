@@ -648,7 +648,11 @@ void CAI_BaseNPC::CleanupOnDeath( CBaseEntity *pCulprit, bool bFireDeathOutput )
 
 void CAI_BaseNPC::SelectDeathPose( const CTakeDamageInfo &info )
 {
+#ifdef OFFSHORE_DLL
+	if ( !GetModelPtr() || info.GetDamageTypes()->HasElement(DMG_PREVENT_PHYSICS_FORCE) )
+#else
 	if ( !GetModelPtr() || (info.GetDamageType() & DMG_PREVENT_PHYSICS_FORCE) )
+#endif
 		return;
 
 	if ( ShouldPickADeathPose() == false )
@@ -725,7 +729,11 @@ void CAI_BaseNPC::Event_Killed( const CTakeDamageInfo &info )
 	// told to remove ourselves immediately on death. This is used when something
 	// else has some special reason for us to vanish instead of creating a ragdoll.
 	// i.e. The barnacle does this because it's already got a ragdoll for us.
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_REMOVENORAGDOLL) )
+#else
 	if ( info.GetDamageType() & DMG_REMOVENORAGDOLL )
+#endif
 	{
 		if ( !IsEFlagSet( EFL_IS_BEING_LIFTED_BY_BARNACLE ) )
 		{
@@ -890,7 +898,11 @@ int CAI_BaseNPC::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		}
 	}
 
+#ifdef OFFSHORE_DLL
+	if( (info.GetDamageTypes()->HasElement(DMG_CRUSH)) && !(info.GetDamageTypes()->HasElement(DMG_PHYSGUN)) && info.GetDamage() >= MIN_PHYSICS_FLINCH_DAMAGE )
+#else
 	if( (info.GetDamageType() & DMG_CRUSH) && !(info.GetDamageType() & DMG_PHYSGUN) && info.GetDamage() >= MIN_PHYSICS_FLINCH_DAMAGE )
+#endif
 	{
 		SetCondition( COND_PHYSICS_DAMAGE );
 	}
@@ -1005,7 +1017,11 @@ int CAI_BaseNPC::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 //=========================================================
 int CAI_BaseNPC::OnTakeDamage_Dying( const CTakeDamageInfo &info )
 {
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement( DMG_PLASMA) )
+#else
 	if ( info.GetDamageType() & DMG_PLASMA )
+#endif
 	{
 		if ( m_takedamage != DAMAGE_EVENTS_ONLY )
 		{
@@ -1051,7 +1067,11 @@ int CAI_BaseNPC::OnTakeDamage_Dead( const CTakeDamageInfo &info )
 #endif
 
 	// kill the corpse if enough damage was done to destroy the corpse and the damage is of a type that is allowed to destroy the corpse.
+#ifdef OFFSHORE_DLL
+	if ( g_pGameRules->Damage_ShouldGibCorpse( info.GetDamageTypes() ) )
+#else
 	if ( g_pGameRules->Damage_ShouldGibCorpse( info.GetDamageType() ) )
+#endif
 	{
 		// Accumulate corpse gibbing damage, so you can gib with multiple hits
 		if ( m_takedamage != DAMAGE_EVENTS_ONLY )
@@ -1060,7 +1080,11 @@ int CAI_BaseNPC::OnTakeDamage_Dead( const CTakeDamageInfo &info )
 		}
 	}
 
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_PLASMA) )
+#else
 	if ( info.GetDamageType() & DMG_PLASMA )
+#endif
 	{
 		if ( m_takedamage != DAMAGE_EVENTS_ONLY )
 		{
@@ -1174,7 +1198,11 @@ void CAI_BaseNPC::DecalTrace( trace_t *pTrace, char const *decalName )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CAI_BaseNPC::ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName )
+#else
 void CAI_BaseNPC::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
+#endif
 {
 	if ( m_fNoDamageDecal )
 	{
@@ -1182,7 +1210,12 @@ void CAI_BaseNPC::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomIm
 		// @Note (toml 04-23-03): e3, don't decal face on damage if still alive
 		return;
 	}
+
+#ifdef OFFSHORE_DLL
+	BaseClass::ImpactTrace( pTrace, hDamageType, pCustomImpactName );
+#else
 	BaseClass::ImpactTrace( pTrace, iDamageType, pCustomImpactName );
+#endif
 }
 
 //---------------------------------------------------------
@@ -1283,7 +1316,11 @@ void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 		break;
 	}
 
+#ifdef OFFSHORE_DLL
+	if ( subInfo.GetDamage() >= 1.0 && !subInfo.GetDamageTypes()->HasElement(DMG_SHOCK) )
+#else
 	if ( subInfo.GetDamage() >= 1.0 && !(subInfo.GetDamageType() & DMG_SHOCK ) )
+#endif
 	{
 		if( !IsPlayer() || ( IsPlayer() && g_pGameRules->IsMultiplayer() ) )
 		{
@@ -1291,7 +1328,11 @@ void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 			SpawnBlood( ptr->endpos, vecDir, BloodColor(), subInfo.GetDamage() );// a little surface blood.
 		}
 
+#ifdef OFFSHORE_DLL
+		TraceBleed( subInfo.GetDamage(), vecDir, ptr, subInfo.GetDamageTypes() );
+#else
 		TraceBleed( subInfo.GetDamage(), vecDir, ptr, subInfo.GetDamageType() );
+#endif
 
 		if ( ptr->hitgroup == HITGROUP_HEAD && m_iHealth - subInfo.GetDamage() > 0 )
 		{
@@ -1300,7 +1341,11 @@ void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 	}
 
 	// Airboat gun will impart major force if it's about to kill him....
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_AIRBOAT) )
+#else
 	if ( info.GetDamageType() & DMG_AIRBOAT )
+#endif
 	{
 		if ( subInfo.GetDamage() >= GetHealth() )
 		{
@@ -1607,7 +1652,11 @@ void CBaseEntity::HandleShotImpactingGlass( const FireBulletsInfo_t &info,
 	//		 would do exactly the same anyway...
 
 	// Impact the other side (will look like an exit effect)
+#ifdef OFFSHORE_DLL
 	DoImpactEffect( penetrationTrace, GetAmmoDef()->DamageType(info.m_iAmmoType) );
+#else
+	DoImpactEffect( penetrationTrace, GetAmmoDef()->DamageType(info.m_iAmmoType) );
+#endif
 
 	data.m_vNormal = penetrationTrace.plane.normal;
 	data.m_vOrigin = penetrationTrace.endpos;
@@ -1705,15 +1754,27 @@ void CAI_BaseNPC::MakeDamageBloodDecal ( int cCount, float flNoise, trace_t *ptr
 // Input  : &tr - 
 //			nDamageType - 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CAI_BaseNPC::DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType )
+#else
 void CAI_BaseNPC::DoImpactEffect( trace_t &tr, int nDamageType )
+#endif
 {
 	if ( GetActiveWeapon() != NULL )
 	{
+#ifdef OFFSHORE_DLL
+		GetActiveWeapon()->DoImpactEffect( tr, hDamageType );
+#else
 		GetActiveWeapon()->DoImpactEffect( tr, nDamageType );
+#endif
 		return;
 	}
 
+#ifdef OFFSHORE_DLL
+	BaseClass::DoImpactEffect( tr, hDamageType );
+#else
 	BaseClass::DoImpactEffect( tr, nDamageType );
+#endif
 }
 
 //---------------------------------------------------------
@@ -11435,7 +11496,13 @@ void CAI_BaseNPC::Freeze( float flFreezeAmount, CBaseEntity *pFreezer, Ray_t *pF
 			if ( IsAlive() )
 			{
 				CreateServerStatue( this, COLLISION_GROUP_NONE );
+#ifdef OFFSHORE_DLL
+				CUtlVector<int> hDamage;
+				hDamage.AddToTail(DMG_GENERIC); hDamage.AddToTail(DMG_REMOVENORAGDOLL); hDamage.AddToTail(DMG_PREVENT_PHYSICS_FORCE);
+				Event_Killed( CTakeDamageInfo( pFreezer, pFreezer, 1000.0, &hDamage  ) );
+#else
 				Event_Killed( CTakeDamageInfo( pFreezer, pFreezer, 1000.0, DMG_GENERIC | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE ) );
+#endif
 				RemoveDeferred();
 			}
 		}
@@ -11745,11 +11812,21 @@ void CAI_BaseNPC::InputSetHealth( inputdata_t &inputdata )
 	int iDelta = abs(GetHealth() - iNewHealth);
 	if ( iNewHealth > GetHealth() )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail( DMG_GENERIC );
+		TakeHealth( iDelta, &hDamage );
+#else
 		TakeHealth( iDelta, DMG_GENERIC );
+#endif
 	}
 	else if ( iNewHealth < GetHealth() )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail( DMG_GENERIC );
+		TakeDamage( CTakeDamageInfo( this, this, iDelta, &hDamage ) );
+#else
 		TakeDamage( CTakeDamageInfo( this, this, iDelta, DMG_GENERIC ) );
+#endif
 	}
 }
 
@@ -13674,7 +13751,12 @@ void CAI_BaseNPC::CalculateValidEnemyInteractions( void )
 		// If we have a damage filter that prevents us hurting the enemy,
 		// don't interact with him, since most interactions kill the enemy.
 		// Create a fake damage info to test it with.
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_BULLET);
+		CTakeDamageInfo tempinfo( this, this, vec3_origin, vec3_origin, 1.0, &hDamageType );
+#else
 		CTakeDamageInfo tempinfo( this, this, vec3_origin, vec3_origin, 1.0, DMG_BULLET );
+#endif
 		if ( !pNPC->PassesDamageFilter( tempinfo ) )
 			continue;
 

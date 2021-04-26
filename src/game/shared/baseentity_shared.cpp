@@ -722,7 +722,11 @@ void CBaseEntity::DecalTrace( trace_t *pTrace, char const *decalName )
 //-----------------------------------------------------------------------------
 // Purpose: Base handling for impacts against entities
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CBaseEntity::ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName )
+#else
 void CBaseEntity::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
+#endif
 {
 	VPROF( "CBaseEntity::ImpactTrace" );
 	Assert( pTrace->m_pEnt );
@@ -738,7 +742,11 @@ void CBaseEntity::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomIm
 	{
 		data.m_nSurfaceProp = 0;
 	}
+#ifdef OFFSHORE_DLL
+	data.m_hDamageType = *hDamageType;
+#else
 	data.m_nDamageType = iDamageType;
+#endif
 	data.m_nHitBox = pTrace->hitbox;
 #ifdef CLIENT_DLL
 	data.m_hEntity = ClientEntityList().EntIndexToHandle( pEntity->entindex() );
@@ -762,15 +770,22 @@ void CBaseEntity::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomIm
 // Input  : bitsDamageType - the damage type
 // Output : the index of the damage decal to use
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+char const *CBaseEntity::DamageDecal( CUtlVector<int> *hDamageType, int gameMaterial )
+#else
 char const *CBaseEntity::DamageDecal( int bitsDamageType, int gameMaterial )
+#endif
 {
 	if ( m_nRenderMode == kRenderTransAlpha )
 		return "";
 
 	if ( m_nRenderMode != kRenderNormal && gameMaterial == 'G' )
 		return "BulletProof";
-
+#ifdef OFFSHORE_DLL
+	if ( hDamageType->HasElement(DMG_SLASH) )
+#else
 	if ( bitsDamageType == DMG_SLASH )
+#endif
 		return "ManhackCut";
 
 	// This will get translated at a lower layer based on game material
@@ -1694,7 +1709,12 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 	static int	tracerCount;
 	trace_t		tr;
 	CAmmoDef*	pAmmoDef	= GetAmmoDef();
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType;
+	hDamageType = *pAmmoDef->DamageType(info.m_iAmmoType);
+#else
 	int			nDamageType	= pAmmoDef->DamageType(info.m_iAmmoType);
+#endif
 	int			nAmmoFlags	= pAmmoDef->Flags(info.m_iAmmoType);
 	
 	bool bDoServerEffects = true;
@@ -1741,8 +1761,14 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 	}
 	  
 	ClearMultiDamage();
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hNewDamage;
+	hNewDamage = hDamageType;
+	hNewDamage.AddToTail(DMG_NEVERGIB);
+	g_MultiDamage.SetDamageType( &hNewDamage );
+#else
 	g_MultiDamage.SetDamageType( nDamageType | DMG_NEVERGIB );
-
+#endif
 	Vector vecDir;
 	Vector vecEnd;
 	
@@ -1900,7 +1926,11 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 
 		// Now hit all triggers along the ray that respond to shots...
 		// Clip the ray to the first collided solid returned from traceline
+#ifdef OFFSHORE_DLL
+		CTakeDamageInfo triggerInfo( pAttacker, pAttacker, info.m_flDamage, &hDamageType );
+#else
 		CTakeDamageInfo triggerInfo( pAttacker, pAttacker, info.m_flDamage, nDamageType );
+#endif
 		CalculateBulletDamageForce( &triggerInfo, info.m_iAmmoType, vecDir, tr.endpos );
 		triggerInfo.ScaleDamageForce( info.m_flDamageForceScale );
 		triggerInfo.SetAmmoType( info.m_iAmmoType );
@@ -1955,21 +1985,33 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 				}
 #endif
 			}
-
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hActualDamageType;
+			hActualDamageType = hDamageType;
+#else
 			int nActualDamageType = nDamageType;
+#endif
 			if ( flActualDamage == 0.0 )
 			{
 				flActualDamage = g_pGameRules->GetAmmoDamage( pAttacker, tr.m_pEnt, info.m_iAmmoType );
 			}
 			else
 			{
+#ifdef OFFSHORE_DLL
+				hActualDamageType.AddToTail((flActualDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB );
+#else
 				nActualDamageType = nDamageType | ((flActualDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB );
+#endif
 			}
 
 			if ( !bHitWater || ((info.m_nFlags & FIRE_BULLETS_DONT_HIT_UNDERWATER) == 0) )
 			{
 				// Damage specified by function parameter
+#ifdef OFFSHORE_DLL
+				CTakeDamageInfo dmgInfo( this, pAttacker, flActualDamage, &hActualDamageType );
+#else
 				CTakeDamageInfo dmgInfo( this, pAttacker, flActualDamage, nActualDamageType );
+#endif
 				CalculateBulletDamageForce( &dmgInfo, info.m_iAmmoType, vecDir, tr.endpos );
 				dmgInfo.ScaleDamageForce( info.m_flDamageForceScale );
 				dmgInfo.SetAmmoType( info.m_iAmmoType );
@@ -1984,7 +2026,11 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 				{
 					if ( bDoServerEffects == true )
 					{
+#ifdef OFFSHORE_DLL
+						DoImpactEffect( tr, &hDamageType );
+#else
 						DoImpactEffect( tr, nDamageType );
+#endif				
 					}
 					else
 					{
@@ -1997,8 +2043,12 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 					CEffectData data;
 					data.m_vStart = tr.startpos;
 					data.m_vOrigin = tr.endpos;
+#ifdef OFFSHORE_DLL
+					data.m_hDamageType = hDamageType;
+#else
 					data.m_nDamageType = nDamageType;
-					
+#endif
+
 					DispatchEffect( "RagdollImpact", data );
 				}
 	
@@ -2096,7 +2146,11 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 	if ( IsPlayer() && flCumulativeDamage > 0.0f )
 	{
 		CBasePlayer *pPlayer = static_cast< CBasePlayer * >( this );
+#ifdef OFFSHORE_DLL
+		CTakeDamageInfo dmgInfo( this, pAttacker, flCumulativeDamage, &hDamageType );
+#else
 		CTakeDamageInfo dmgInfo( this, pAttacker, flCumulativeDamage, nDamageType );
+#endif
 		gamestats->Event_WeaponHit( pPlayer, info.m_bPrimaryAttack, pPlayer->GetActiveWeapon()->GetClassname(), dmgInfo );
 	}
 #endif
@@ -2202,7 +2256,11 @@ void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 		if ( blood != DONT_BLEED )
 		{
 			SpawnBlood( vecOrigin, vecDir, blood, info.GetDamage() );// a little surface blood.
+#ifdef OFFSHORE_DLL
+			TraceBleed( info.GetDamage(), vecDir, ptr, info.GetDamageTypes() );
+#else
 			TraceBleed( info.GetDamage(), vecDir, ptr, info.GetDamageType() );
+#endif
 		}
 	}
 }
@@ -2211,10 +2269,18 @@ void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 //-----------------------------------------------------------------------------
 // Allows the shooter to change the impact effect of his bullets
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CBaseEntity::DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType )
+#else
 void CBaseEntity::DoImpactEffect( trace_t &tr, int nDamageType )
+#endif
 {
 	// give shooter a chance to do a custom impact.
+#ifdef OFFSHORE_DLL
+	UTIL_ImpactTrace( &tr, hDamageType );
+#else
 	UTIL_ImpactTrace( &tr, nDamageType );
+#endif
 } 
 
 
@@ -2315,8 +2381,11 @@ int CBaseEntity::BloodColor()
 	return DONT_BLEED; 
 }
 
-
+#ifdef OFFSHORE_DLL
+void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, CUtlVector<int> *hDamageType )
+#else
 void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType )
+#endif
 {
 	if ((BloodColor() == DONT_BLEED) || (BloodColor() == BLOOD_COLOR_MECH))
 	{
@@ -2326,7 +2395,16 @@ void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr
 	if (flDamage == 0)
 		return;
 
+#ifdef OFFSHORE_DLL
+	if ( !(hDamageType->HasElement(DMG_CRUSH) 
+		|| hDamageType->HasElement(DMG_BULLET) 
+		|| hDamageType->HasElement(DMG_SLASH) 
+		|| hDamageType->HasElement(DMG_BLAST)
+		|| hDamageType->HasElement(DMG_CLUB)
+		|| hDamageType->HasElement(DMG_AIRBOAT)) )
+#else
 	if (! (bitsDamageType & (DMG_CRUSH | DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB | DMG_AIRBOAT)))
+#endif
 		return;
 
 	// make blood decal on the wall!
@@ -2368,7 +2446,11 @@ void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr
 		cCount = 4;
 	}
 
+#ifdef OFFSHORE_DLL
+	float flTraceDist = hDamageType->HasElement(DMG_AIRBOAT) ? 384 : 172;
+#else
 	float flTraceDist = (bitsDamageType & DMG_AIRBOAT) ? 384 : 172;
+#endif
 	for ( i = 0 ; i < cCount ; i++ )
 	{
 		vecTraceDir = vecDir * -1;// trace in the opposite direction the shot came from (the direction the shot is going)

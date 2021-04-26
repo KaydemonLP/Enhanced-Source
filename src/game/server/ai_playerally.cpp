@@ -1179,7 +1179,11 @@ int CAI_PlayerAlly::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+int CAI_PlayerAlly::TakeHealth( float flHealth, CUtlVector<int> *hDamageType )
+#else
 int CAI_PlayerAlly::TakeHealth( float flHealth, int bitsDamageType )
+#endif
 {
 	int intPortion;
 	float floatPortion;
@@ -1195,7 +1199,11 @@ int CAI_PlayerAlly::TakeHealth( float flHealth, int bitsDamageType )
 		intPortion += 1;
 	}
 
+#ifdef OFFSHORE_DLL
+	return BaseClass::TakeHealth( ((float)intPortion), hDamageType );
+#else
 	return BaseClass::TakeHealth( ((float)intPortion), bitsDamageType );
+#endif
 }
 
 //-----------------------------------------------------------------------------

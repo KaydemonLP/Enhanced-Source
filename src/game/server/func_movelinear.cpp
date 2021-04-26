@@ -356,7 +356,12 @@ void CFuncMoveLinear::Blocked( CBaseEntity *pOther )
 	// Hurt the blocker 
 	if ( m_flBlockDamage )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+		pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, &hDamage ) );
+#else
 		pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
+#endif
 	}
 }
 

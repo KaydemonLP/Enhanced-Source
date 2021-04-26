@@ -209,7 +209,11 @@ void CBaseCombatWeapon::Precache( void )
 
 	// Add this weapon to the weapon registry, and get our index into it
 	// Get weapon data from script file
+#ifdef OFFSHORE_DLL
+	if ( ReadWeaponDataFromFileForSlot( filesystem, GetSchemaName(), &m_hWeaponFileInfo, GetEncryptionKey() ) )
+#else
 	if ( ReadWeaponDataFromFileForSlot( filesystem, GetClassname(), &m_hWeaponFileInfo, GetEncryptionKey() ) )
+#endif
 	{
 		// Get the ammo indexes for the ammo's specified in the data file
 		if ( GetWpnData().szAmmo1[0] )
@@ -2382,6 +2386,7 @@ int CBaseCombatWeapon::GetAvailableWeaponsInBox( CBaseCombatWeapon **pList, int 
 }
 #endif
 
+LINK_ENTITY_TO_CLASS(base_combat_weapon, CBaseCombatWeapon);
 
 #if defined( CLIENT_DLL )
 

@@ -564,7 +564,12 @@ void IBotSchedule::TaskStart()
         // NOTE: This is only a test
         case BTASK_HEAL:
         {
-            GetHost()->TakeHealth( 30.0f, DMG_GENERIC );
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_GENERIC);
+			GetHost()->TakeHealth(30.0f, &hDamageType);
+#else
+			GetHost()->TakeHealth( 30.0f, DMG_GENERIC );
+#endif
             TaskComplete();
             break;
         }

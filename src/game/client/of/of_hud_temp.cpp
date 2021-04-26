@@ -32,6 +32,8 @@ using namespace vgui;
 
 #include "ConVar.h"
 
+#include "c_sdk_player.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -192,8 +194,8 @@ protected:
 	virtual void OnThink();
 
 	void UpdateAmmoDisplays();
-	void UpdatePlayerAmmo( C_BasePlayer *player );
-	void UpdateVehicleAmmo( C_BasePlayer *player, IClientVehicle *pVehicle );
+	void UpdatePlayerAmmo( C_SDKPlayer *player );
+	void UpdateVehicleAmmo( C_SDKPlayer *player, IClientVehicle *pVehicle );
 	
 private:
 	CHandle< C_BaseCombatWeapon > m_hCurrentActiveWeapon;
@@ -264,7 +266,7 @@ void CHudAmmo::Reset()
 //-----------------------------------------------------------------------------
 // Purpose: called every frame to get ammo info from the weapon
 //-----------------------------------------------------------------------------
-void CHudAmmo::UpdatePlayerAmmo( C_BasePlayer *player )
+void CHudAmmo::UpdatePlayerAmmo( C_SDKPlayer *player )
 {
 	if (!player)
 		return;
@@ -272,7 +274,7 @@ void CHudAmmo::UpdatePlayerAmmo( C_BasePlayer *player )
 	// Clear out the vehicle entity
 	m_hCurrentVehicle = NULL;
 
-	C_BaseCombatWeapon *wpn = player->GetActiveWeapon();
+	C_BaseSDKCombatWeapon *wpn = player->GetActiveSDKWeapon();
 
 	hudlcd->SetGlobalStat( "(weapon_print_name)", wpn ? wpn->GetPrintName() : " " );
 	hudlcd->SetGlobalStat( "(weapon_name)", wpn ? wpn->GetName() : " " );
@@ -299,13 +301,13 @@ void CHudAmmo::UpdatePlayerAmmo( C_BasePlayer *player )
 	if (ammo1 < 0)
 	{
 		// we don't use clip ammo, just use the total ammo count
-		ammo1 = player->GetAmmoCount(wpn->GetPrimaryAmmoType());
+		ammo1 = wpn->GetReserveAmmo();
 		ammo2 = 0;
 	}
 	else
 	{
 		// we use clip ammo, so the second ammo is the total ammo
-		ammo2 = player->GetAmmoCount(wpn->GetPrimaryAmmoType());
+		ammo2 = wpn->GetReserveAmmo();
 	}
 
 	hudlcd->SetGlobalStat( "(ammo_primary)", VarArgs( "%d", ammo1 ) );
@@ -353,7 +355,7 @@ void CHudAmmo::OnThink()
 //-----------------------------------------------------------------------------
 void CHudAmmo::UpdateAmmoDisplays()
 {
-	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
+	C_SDKPlayer *player = C_SDKPlayer::GetLocalSDKPlayer();
 
 	UpdatePlayerAmmo( player );
 }

@@ -296,16 +296,27 @@ void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayerSlot /*
 				{
 					pEnt->ParticleProp()->StopEmission();
 				}
-
+#ifdef OFFSHORE_DLL
+				ParticleAttachment_t iAttachment = data.m_hDamageType.Count() ? (ParticleAttachment_t)data.m_hDamageType[0] : (ParticleAttachment_t)0;
+				CUtlReference<CNewParticleEffect> pEffect = pEnt->ParticleProp()->CreatePrecached( data.m_nHitBox, iAttachment, data.m_nAttachmentIndex );
+#else
 				CUtlReference<CNewParticleEffect> pEffect = pEnt->ParticleProp()->CreatePrecached( data.m_nHitBox, (ParticleAttachment_t)data.m_nDamageType, data.m_nAttachmentIndex );
-
+#endif
 				if ( pEffect.IsValid() && pEffect->IsValid() )
 				{
+#ifdef OFFSHORE_DLL
+					if ( iAttachment == PATTACH_CUSTOMORIGIN || iAttachment == PATTACH_CUSTOMORIGIN_FOLLOW )
+#else
 					if ( (ParticleAttachment_t)data.m_nDamageType == PATTACH_CUSTOMORIGIN || (ParticleAttachment_t)data.m_nDamageType == PATTACH_CUSTOMORIGIN_FOLLOW )
+#endif				
 					{
 						pEffect->SetDrawOnlyForSplitScreenUser( nSplitScreenPlayerSlot );
 						pEffect->SetSortOrigin( data.m_vOrigin );
+#ifdef OFFSHORE_DLL
+						if ( iAttachment == PATTACH_CUSTOMORIGIN_FOLLOW )
+#else
 						if ( (ParticleAttachment_t)data.m_nDamageType == PATTACH_CUSTOMORIGIN_FOLLOW )
+#endif
 						{
 							Vector vecCtrl1 = (data.m_vStart - pEnt->GetAbsOrigin() );
 							pEffect->SetControlPoint( 1, vecCtrl1 );

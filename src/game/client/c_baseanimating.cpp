@@ -406,7 +406,11 @@ void C_ClientRagdoll::OnRestore( void )
 	RagdollMoved();
 }
 
+#ifdef OFFSHORE_DLL
+void C_ClientRagdoll::ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName )
+#else
 void C_ClientRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
+#endif
 {
 	VPROF( "C_ClientRagdoll::ImpactTrace" );
 
@@ -420,7 +424,11 @@ void C_ClientRagdoll::ImpactTrace( trace_t *pTrace, int iDamageType, char *pCust
 
 	Vector dir = pTrace->endpos - pTrace->startpos;
 
+#ifdef OFFSHORE_DLL
+	if ( hDamageType->HasElement(DMG_BLAST) )
+#else
 	if ( iDamageType & DMG_BLAST )
+#endif
 	{
 		dir *= 500;  // adjust impact strenght
 

@@ -34,7 +34,11 @@ public:
 	Class_T Classify( void );
 	void	Event_Killed( const CTakeDamageInfo &info );
 	void	DecalTrace( trace_t *pTrace, char const *decalName );
+#ifdef OFFSHORE_DLL
+	void	ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName );
+#else
 	void	ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName );
+#endif
 	bool	IsLightDamage( const CTakeDamageInfo &info );
 	void	TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 	int		OnTakeDamage( const CTakeDamageInfo &info );

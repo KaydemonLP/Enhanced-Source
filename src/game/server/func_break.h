@@ -68,7 +68,11 @@ public:
 	bool IsBreakable( void );
 	bool SparkWhenHit( void );
 
+#ifdef OFFSHORE_DLL
+	char const		*DamageDecal( CUtlVector<int> *hDamageType, int gameMaterial );
+#else
 	char const		*DamageDecal( int bitsDamageType, int gameMaterial );
+#endif
 
 	virtual void	Die( void );
 	void			ResetOnGroundFlags(void);

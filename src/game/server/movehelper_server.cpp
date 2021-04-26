@@ -383,7 +383,12 @@ bool CMoveHelperServer::PlayerFallingDamage( void )
 		float flFallDamage = g_pGameRules->FlPlayerFallDamage( pPlayer );	
 		if ( flFallDamage > 0 )
 		{
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_FALL);
+			pPlayer->TakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), flFallDamage, &hDamage ) );
+#else
 			pPlayer->TakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), flFallDamage, DMG_FALL ) ); 
+#endif
 			StartSound( pPlayer->GetAbsOrigin(), "Player.FallDamage" );
 		}
 

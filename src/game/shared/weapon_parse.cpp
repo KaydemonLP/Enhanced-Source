@@ -26,6 +26,10 @@
 #include <string>
 #endif
 
+#ifdef OFFSHORE_DLL
+#include "of_shared_schemas.h"
+#endif
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -129,7 +133,18 @@ WEAPON_FILE_INFO_HANDLE LookupWeaponInfoSlot( const char *name )
 // FIXME, handle differently?
 static FileWeaponInfo_t gNullWeaponInfo;
 
+void MarkWeaponAsDirty( const char *szName )
+{
+	FileWeaponInfo_t *pFileInfo = GetFileWeaponInfoFromHandle( FindWeaponInfoSlot( szName ) );
+	pFileInfo->bParsedScript = false;
+}
 
+void RemoveWeaponFromDatabase( const char *szName )
+{
+	FileWeaponInfo_t *pFileInfo = GetFileWeaponInfoFromHandle( FindWeaponInfoSlot( szName ) );
+	delete pFileInfo;
+	m_WeaponInfoDatabase.Remove(szName);
+}
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : handle - 
@@ -159,20 +174,34 @@ WEAPON_FILE_INFO_HANDLE GetInvalidWeaponInfoHandle( void )
 	return (WEAPON_FILE_INFO_HANDLE)m_WeaponInfoDatabase.InvalidIndex();
 }
 
-#if 0
+#if OFFSHORE_DLL
 void ResetFileWeaponInfoDatabase( void )
 {
-	int c = m_WeaponInfoDatabase.Count(); 
-	for ( int i = 0; i < c; ++i )
+	for( unsigned int i = 0; i < m_WeaponInfoDatabase.Count(); i++ )
 	{
-		delete m_WeaponInfoDatabase[ i ];
+		WEAPON_FILE_INFO_HANDLE hHandle = i;
+		ReadWeaponDataFromFileForSlot( filesystem, m_WeaponInfoDatabase[i]->szClassName, &hHandle, g_pGameRules->GetEncryptionKey(), true );
 	}
-	m_WeaponInfoDatabase.RemoveAll();
 
 #ifdef _DEBUG
 	memset(g_bUsedWeaponSlots, 0, sizeof(g_bUsedWeaponSlots));
 #endif
 }
+
+void CC_ReloadWeapons( void )
+{
+	ResetFileWeaponInfoDatabase();
+
+#ifdef CLIENT_DLL
+	engine->ExecuteClientCmd( "schema_reload_weapons_server" );
+#endif
+}
+
+#ifdef CLIENT_DLL
+	static ConCommand schema_reload_weapons("schema_reload_weapons", CC_ReloadWeapons, "Reload weapon database\n", FCVAR_CHEAT );
+#else
+	static ConCommand schema_reload_weapons_server("schema_reload_weapons_server", CC_ReloadWeapons, "Reload weapon database\n", FCVAR_CHEAT | FCVAR_HIDDEN );
+#endif
 #endif
 
 #ifdef SMMOD
@@ -364,8 +393,11 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameW
 // Output:  true  - if data2 successfully read
 //			false - if data load fails
 //-----------------------------------------------------------------------------
-
+#ifdef OFFSHORE_DLL
+bool ReadWeaponDataFromFileForSlot( IFileSystem* filesystem, const char *szWeaponName, WEAPON_FILE_INFO_HANDLE *phandle, const unsigned char *pICEKey, bool bReParse )
+#else
 bool ReadWeaponDataFromFileForSlot( IFileSystem* filesystem, const char *szWeaponName, WEAPON_FILE_INFO_HANDLE *phandle, const unsigned char *pICEKey, bool bIsCustom )
+#endif
 {
 	if ( !phandle )
 	{
@@ -377,20 +409,54 @@ bool ReadWeaponDataFromFileForSlot( IFileSystem* filesystem, const char *szWeapo
 	FileWeaponInfo_t *pFileInfo = GetFileWeaponInfoFromHandle( *phandle );
 	Assert( pFileInfo );
 
+#ifdef OFFSHORE_DLL
+	if ( pFileInfo->bParsedScript && !bReParse )
+#else
 	if ( pFileInfo->bParsedScript )
+#endif
 		return true;
+
+#ifdef OFFSHORE_DLL
+	bool bUsingItemsGame = false;
+		
+	KeyValues *pKV;
+
+	pKV = GetWeaponFromSchema( szWeaponName );
+	if( pKV )
+	{
+		/*if( of_weapon_testing.GetBool() && GetWeaponFromSchema( Shared_VarArgs( "%s_beta",szWeaponName ) ) )
+			pKV = GetWeaponFromSchema( Shared_VarArgs( "%s_beta", szWeaponName ) );*/
+
+		pKV = pKV->FindKey( "WeaponData" );
+		if( pKV )
+			bUsingItemsGame = true;
+	}
+
+	if( !bUsingItemsGame )
+	{
+#endif
 
 	char sz[128];
 	Q_snprintf(sz, sizeof(sz), "scripts/weapons/%s", szWeaponName);
-	KeyValues *pKV = ReadEncryptedKVFile(filesystem, sz, pICEKey);
-	if (!pKV)
+#ifndef OFFSHORE_DLL
+	KeyValues *
+#endif
+		pKV = ReadEncryptedKVFile(filesystem, sz, pICEKey);
+
+#ifdef OFFSHORE_DLL
+	}
+#endif
+	if( !pKV )
 		return false;
 
 	pFileInfo->Parse( pKV, szWeaponName );
-
+#ifdef OFFSHORE_DLL
+	if( !bUsingItemsGame ) // Dont remove from the items game
+#endif
 	pKV->deleteThis();
 
 	return true;
+
 }
 
 

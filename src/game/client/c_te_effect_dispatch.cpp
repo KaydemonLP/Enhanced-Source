@@ -149,7 +149,19 @@ static void RecordEffect( const char *pEffectName, const CEffectData &data )
 		msg->SetFloat( "radius", data.m_flRadius );
 		msg->SetString( "surfaceprop", pSurfacePropName );
 		msg->SetInt( "color", data.m_nColor );
+#ifdef OFFSHORE_DLL
+		char szResult[256];
+		FOR_EACH_VEC(data.m_hDamageType, i)
+		{
+			if( !i )
+				VarArgs("d%", data.m_hDamageType[i]);
+
+			VarArgs("s% d%", szResult, data.m_hDamageType[i]);
+		}
+		msg->SetString( "damagetype", szResult );
+#else
 		msg->SetInt( "damagetype", data.m_nDamageType );
+#endif
 		msg->SetInt( "hitbox", data.m_nHitBox );
  		msg->SetString( "effectname", pEffectName );
 
@@ -237,7 +249,17 @@ void DispatchEffect( IRecipientFilter& filter, float delay, KeyValues *pKeyValue
 	data.m_flRadius = pKeyValues->GetFloat( "radius" );
 	const char *pSurfaceProp = pKeyValues->GetString( "surfaceprop" );
 	data.m_nSurfaceProp = physprops->GetSurfaceIndex( pSurfaceProp );
+#ifdef OFFSHORE_DLL
+	CCommand args;
+	args.Tokenize(pKeyValues->GetString( "damagetype" ));
+
+	for( int i = 0; i < args.ArgC(); i++ )
+	{
+		data.m_hDamageType.AddToTail(atoi(args[i]));
+	}
+#else
 	data.m_nDamageType = pKeyValues->GetInt( "damagetype" );
+#endif
 	data.m_nHitBox = pKeyValues->GetInt( "hitbox" );
 	data.m_nColor = pKeyValues->GetInt( "color" );
 	data.m_nAttachmentIndex = pKeyValues->GetInt( "attachmentindex" );

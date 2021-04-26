@@ -35,7 +35,7 @@ END_DATADESC()
 //-----------------------------------------------------------------------------
 CSDKMachineGun::CSDKMachineGun( void )
 {
-	m_bDelayFire = true;
+
 }
 
 const Vector &CSDKMachineGun::GetBulletSpread( void )
@@ -85,7 +85,6 @@ void CSDKMachineGun::PrimaryAttack( void )
 		m_iClip1 -= iBulletsToFire;
 	}
 
-	m_iPrimaryAttacks++;
 	gamestats->Event_WeaponFired( pPlayer, true, GetClassname() );
 
 	// Fire the bullets
@@ -213,8 +212,6 @@ bool CSDKMachineGun::Deploy( void )
 	pPlayer->m_iShotsFired = 0;
 	m_nShotsFired = 0;
 
-	m_bDelayFire = false;
-
 	return BaseClass::Deploy();
 }
 
@@ -329,8 +326,6 @@ bool CSDKSelectFireMachineGun::Deploy( void )
 	pPlayer->m_iShotsFired = 0;
 	m_nShotsFired = 0;
 
-	m_bDelayFire = false;
-
 	m_iBurstSize = 0;
 	return BaseClass::Deploy();
 }
@@ -374,9 +369,7 @@ void CSDKSelectFireMachineGun::PrimaryAttack( void )
 	{
 		CSDKPlayer *pPlayer = ToSDKPlayer(pOwner);
 		pPlayer->m_iShotsFired++;
-		m_bDelayFire = true;
 
-		m_iPrimaryAttacks++;
 		gamestats->Event_WeaponFired( pOwner, true, GetClassname() );
 	}
 }
@@ -414,9 +407,7 @@ void CSDKSelectFireMachineGun::SecondaryAttack( void )
 	{
 		CSDKPlayer *pPlayer = ToSDKPlayer(pOwner);
 		pPlayer->m_iShotsFired++;
-		m_bDelayFire = true;
 
-		m_iSecondaryAttacks++;
 		gamestats->Event_WeaponFired( pOwner, false, GetClassname() );
 	}
 }

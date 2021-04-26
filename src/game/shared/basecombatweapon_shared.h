@@ -35,6 +35,10 @@
 #include "item_base.h"
 #endif // USES_PERSISTENT_ITEMS
 
+#ifdef OFFSHORE_DLL
+#include "of_baseschemaitem.h"
+#endif
+
 #if !defined( CLIENT_DLL )
 extern void OnBaseCombatWeaponCreated( CBaseCombatWeapon * );
 extern void OnBaseCombatWeaponDestroyed( CBaseCombatWeapon * );
@@ -132,7 +136,11 @@ namespace vgui2
 #if defined USES_PERSISTENT_ITEMS
 #define BASECOMBATWEAPON_DERIVED_FROM		CBaseAttributableItem
 #else 
+#ifdef OFFSHORE_DLL
+#define BASECOMBATWEAPON_DERIVED_FROM		CBaseSchemaEntity
+#else
 #define BASECOMBATWEAPON_DERIVED_FROM		CBaseAnimating
+#endif
 #endif 
 
 //-----------------------------------------------------------------------------

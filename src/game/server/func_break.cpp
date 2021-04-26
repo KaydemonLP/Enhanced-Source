@@ -525,10 +525,21 @@ void CBreakable::BreakTouch( CBaseEntity *pOther )
 			m_takedamage = DAMAGE_YES;
 
 			SetTouch( NULL );
+#ifdef OFFSHORE_DLL
+			{
+				CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+				OnTakeDamage( CTakeDamageInfo( pOther, pOther, flDamage, &hDamage ) );
+			}
+#else
 			OnTakeDamage( CTakeDamageInfo( pOther, pOther, flDamage, DMG_CRUSH ) );
-
-			// do a little damage to player if we broke glass or computer
+#endif
+			// We do a little damage to player if we broke glass or computer
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_SLASH);
+			CTakeDamageInfo info( pOther, pOther, flDamage/4, &hDamage );
+#else
 			CTakeDamageInfo info( pOther, pOther, flDamage/4, DMG_SLASH );
+#endif
 			CalculateMeleeDamageForce( &info, (pOther->GetAbsOrigin() - GetAbsOrigin()), GetAbsOrigin() );
 			pOther->TakeDamage( info );
 		}
@@ -722,7 +733,12 @@ void CBreakable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 		{
 			pEvent->pObjects[index]->SetMass( 2.0f );
 		}
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+		CTakeDamageInfo dmgInfo( pHitEntity, pHitEntity, damageForce, damagePos, (m_iHealth + 1), &hDamage );
+#else
 		CTakeDamageInfo dmgInfo( pHitEntity, pHitEntity, damageForce, damagePos, (m_iHealth + 1), DMG_CRUSH );
+#endif
 		PhysCallbackDamage( this, dmgInfo, *pEvent, index );
 	}
 	else if ( !HasSpawnFlags( SF_BREAK_DONT_TAKE_PHYSICS_DAMAGE ) )
@@ -731,7 +747,13 @@ void CBreakable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 		CBaseEntity *pOther = pEvent->pEntities[otherIndex];
 
 		// We're to take normal damage from this
+
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType;
+		CUtlVector<int> *damageType = &hDamageType;
+#else
 		int damageType;
+#endif
 		IBreakableWithPropData *pBreakableInterface = assert_cast<IBreakableWithPropData*>(this);
 		float damage = CalculateDefaultPhysicsDamage( index, pEvent, m_impactEnergyScale, true, damageType, pBreakableInterface->GetPhysicsDamageTable() );
 		if ( damage > 0 )
@@ -789,7 +811,11 @@ int CBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 	{
 		// Don't play shard noise if being burned.
 		// Don't play shard noise if cbreakable actually died.
+#ifdef OFFSHORE_DLL
+		if ( subInfo.GetDamageTypes()->HasElement( DMG_BURN ) == false )
+#else
 		if ( ( subInfo.GetDamageType() & DMG_BURN ) == false )
+#endif
 		{
 			DamageSound();
 		}
@@ -1057,7 +1083,11 @@ bool CBreakable::IsBreakable( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+char const *CBreakable::DamageDecal( CUtlVector<int> *hDamageType, int gameMaterial )
+#else
 char const *CBreakable::DamageDecal( int bitsDamageType, int gameMaterial )
+#endif
 {
 	if ( m_Material == matGlass  )
 		return "GlassBreak";
@@ -1065,7 +1095,11 @@ char const *CBreakable::DamageDecal( int bitsDamageType, int gameMaterial )
 	if ( m_Material == matUnbreakableGlass )
 		return "BulletProof";
 
+#ifdef OFFSHORE_DLL
+	return BaseClass::DamageDecal( hDamageType, gameMaterial );
+#else
 	return BaseClass::DamageDecal( bitsDamageType, gameMaterial );
+#endif
 }
 
 //-----------------------------------------------------------------------------

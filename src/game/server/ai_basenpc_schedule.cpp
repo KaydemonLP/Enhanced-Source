@@ -1216,6 +1216,9 @@ void CAI_BaseNPC::StartScriptMoveToTargetTask( int task )
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::StartTask( const Task_t *pTask )
 {
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+#endif
 	int task = pTask->iTask;
 	switch ( pTask->iTask )
 	{
@@ -2071,7 +2074,6 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 //==================================================
 // TASK_GET_PATH_TO_GOAL
 //==================================================
-
 	case TASK_GET_PATH_TO_GOAL:
 		{
 			AI_NavGoal_t goal( m_nStoredPathType, 
@@ -3135,7 +3137,11 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 		break;
 
 	case TASK_ADD_HEALTH:
+#ifdef OFFSHORE_DLL
+		TakeHealth( (int)pTask->flTaskData, &hDamage );
+#else
 		TakeHealth( (int)pTask->flTaskData, DMG_GENERIC );
+#endif
 		TaskComplete();
 		break;
 

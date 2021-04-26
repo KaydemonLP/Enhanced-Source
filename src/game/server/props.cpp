@@ -110,13 +110,26 @@ Vector GetVelocityFromDamageForce( const CTakeDamageInfo &info, const CBaseEntit
 float GetBreakableDamage( const CTakeDamageInfo &inputInfo, IBreakableWithPropData *pProp )
 {
 	float flDamage = inputInfo.GetDamage();
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDmgType;
+	hDmgType = *inputInfo.GetDamageTypes();
+#else
 	int iDmgType = inputInfo.GetDamageType();
+#endif
 
 	// Bullet damage?
+#ifdef OFFSHORE_DLL
+	if ( hDmgType.HasElement(DMG_BULLET) )
+#else
 	if ( iDmgType & DMG_BULLET )
+#endif
 	{
 		// Buckshot does double damage to breakables
+#ifdef OFFSHORE_DLL
+		if ( hDmgType.HasElement(DMG_BUCKSHOT) )
+#else
 		if ( iDmgType & DMG_BUCKSHOT )
+#endif
 		{
 			if ( pProp )
 			{
@@ -143,7 +156,11 @@ float GetBreakableDamage( const CTakeDamageInfo &inputInfo, IBreakableWithPropDa
 	}
 
 	// Club damage?
+#ifdef OFFSHORE_DLL
+	if ( hDmgType.HasElement(DMG_CLUB) )
+#else
 	if ( iDmgType & DMG_CLUB )
+#endif
 	{
 		if ( pProp )
 		{
@@ -157,7 +174,11 @@ float GetBreakableDamage( const CTakeDamageInfo &inputInfo, IBreakableWithPropDa
 	}
 
 	// Explosive damage?
+#ifdef OFFSHORE_DLL
+	if ( hDmgType.HasElement(DMG_BLAST) )
+#else
 	if ( iDmgType & DMG_BLAST )
+#endif
 	{
 		if ( pProp )
 		{
@@ -171,22 +192,33 @@ float GetBreakableDamage( const CTakeDamageInfo &inputInfo, IBreakableWithPropDa
 	}
 
 	// Fire damage?
+#ifdef OFFSHORE_DLL
+	if ( hDmgType.HasElement(DMG_BURN) )
+#else
 	if ( iDmgType & DMG_BURN )
+#endif
 	{
 		if ( pProp )
 		{
 			flDamage *= pProp->GetDmgModFire();
 		}
 	}
-
-	if ( (iDmgType & DMG_SLASH) && (iDmgType & DMG_CRUSH) )
+#ifdef OFFSHORE_DLL
+	if ( hDmgType.HasElement(DMG_SLASH) && hDmgType.HasElement(DMG_CRUSH) )
+#else
+	if ( iDmgType & DMG_CLUB )
+#endif
 	{
 		// Cut by a Ravenholm propeller trap
 		flDamage *= 10.0f;
 	}
 
 	// Poison & other timebased damage types do no damage
+#ifdef OFFSHORE_DLL
+	if ( g_pGameRules->Damage_IsTimeBased( &hDmgType ) )
+#else
 	if ( g_pGameRules->Damage_IsTimeBased( iDmgType ) )
+#endif
 	{
 		flDamage = 0;
 	}
@@ -1013,10 +1045,20 @@ void CBreakableProp::BreakablePropTouch( CBaseEntity *pOther )
 		{
 			// Make sure we can take damage
 			m_takedamage = DAMAGE_YES;
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+			OnTakeDamage( CTakeDamageInfo( pOther, pOther, flDamage, &hDamage ) );
+#else
 			OnTakeDamage( CTakeDamageInfo( pOther, pOther, flDamage, DMG_CRUSH ) );
+#endif
 
 			// do a little damage to player if we broke glass or computer
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hGlassDamage; hGlassDamage.AddToTail(DMG_SLASH);
+			CTakeDamageInfo info( pOther, pOther, flDamage/4, &hGlassDamage );
+#else
 			CTakeDamageInfo info( pOther, pOther, flDamage/4, DMG_SLASH );
+#endif
 			CalculateMeleeDamageForce( &info, (pOther->GetAbsOrigin() - GetAbsOrigin()), GetAbsOrigin() );
 			pOther->TakeDamage( info );
 		}
@@ -1124,7 +1166,11 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	// Ignore fire damage from other flames if I'm already on fire.
 	// (i.e., only let the flames attached to me damage me)
+#ifdef OFFSHORE_DLL
+	if( IsOnFire() && inputInfo.GetDamageTypes()->HasElement(DMG_BURN) && !inputInfo.GetDamageTypes()->HasElement(DMG_DIRECT) )
+#else
 	if( IsOnFire() && (inputInfo.GetDamageType() & DMG_BURN) && !(inputInfo.GetDamageType() & DMG_DIRECT) )
+#endif
 	{
 		return 0;
 	}
@@ -1132,7 +1178,11 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	bool bDeadly = info.GetDamage() >= m_iHealth;
 
 	// Handle melee attack immunity
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_CLUB) || (info.GetDamageTypes()->HasElement(DMG_SLASH)) && HasInteraction( PROPINTER_MELEE_IMMUNE ) )
+#else
 	if ( ((info.GetDamageType() & DMG_CLUB) || (info.GetDamageType() & DMG_SLASH)) && HasInteraction( PROPINTER_MELEE_IMMUNE ) )
+#endif
 	{
 		int saveFlags = m_takedamage;
 		m_takedamage = DAMAGE_EVENTS_ONLY;
@@ -1141,7 +1191,11 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		return ret;
 	}
 
+#ifdef OFFSHORE_DLL
+	if( bDeadly && (info.GetDamageTypes()->HasElement(DMG_BLAST)) && HasInteraction( PROPINTER_FIRE_EXPLOSIVE_RESIST ) && info.GetInflictor() )
+#else
 	if( bDeadly && (info.GetDamageType() & DMG_BLAST) && HasInteraction( PROPINTER_FIRE_EXPLOSIVE_RESIST ) && info.GetInflictor() )
+#endif
 	{
 		// This explosion would kill me, but I have a special interaction with explosions.
 
@@ -1181,16 +1235,28 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		bDeadly = info.GetDamage() >= m_iHealth;
 	}
 
+#ifdef OFFSHORE_DLL
+	if ( !bDeadly && (info.GetDamageTypes()->HasElement(DMG_BLAST)) )
+#else
 	if ( !bDeadly && (info.GetDamageType() & DMG_BLAST) )
+#endif
 	{
 		Ignite( random->RandomFloat( 10, 15 ), false );
 	}
+#ifdef OFFSHORE_DLL
+	else if ( !bDeadly && info.GetDamageTypes()->HasElement(DMG_BURN) )
+#else
 	else if ( !bDeadly && (info.GetDamageType() & DMG_BURN) )
+#endif
 	{
 		// Ignite if burned, and flammable (the Ignite() function takes care of all of this).
 		Ignite( random->RandomFloat( 10, 15 ), false );
 	}
+#ifdef OFFSHORE_DLL
+	else if ( !bDeadly && info.GetDamageTypes()->HasElement(DMG_BULLET) )
+#else
 	else if ( !bDeadly && (info.GetDamageType() & DMG_BULLET) )
+#endif
 	{
 		if ( HasInteraction( PROPINTER_FIRE_IGNITE_HALFHEALTH ) )
 		{
@@ -3396,7 +3462,13 @@ void CPhysicsProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 
 	if ( !HasSpawnFlags( SF_PHYSPROP_DONT_TAKE_PHYSICS_DAMAGE ) )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType;
+		// just for convenience sake
+		CUtlVector<int> *damageType = &hDamageType;
+#else
 		int damageType = 0;
+#endif
 
 		IBreakableWithPropData *pBreakableInterface = assert_cast<IBreakableWithPropData*>(this);
 		float damage = CalculateDefaultPhysicsDamage( index, pEvent, m_impactEnergyScale, true, damageType, pBreakableInterface->GetPhysicsDamageTable() );
@@ -3461,7 +3533,11 @@ int CPhysicsProp::OnTakeDamage( const CTakeDamageInfo &info )
 
 	if( IsOnFire() )
 	{
+#ifdef OFFSHORE_DLL
+		if( info.GetDamageTypes()->HasElement(DMG_BURN) && info.GetDamageTypes()->HasElement(DMG_DIRECT) )
+#else
 		if( (info.GetDamageType() & DMG_BURN) && (info.GetDamageType() & DMG_DIRECT) )
+#endif
 		{
 			// Burning! scare things in my path if I'm moving.
 			Vector vel;
@@ -4822,7 +4898,12 @@ void CBasePropDoor::Blocked(CBaseEntity *pOther)
 	}
 	else if ( m_bForceClosed && ( pOther->GetMoveType() == MOVETYPE_VPHYSICS ) && ( pOther->m_takedamage == DAMAGE_YES ) )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_CRUSH);
+		pOther->TakeDamage( CTakeDamageInfo( this, this, pOther->GetHealth(), &hDamage ) );
+#else
 		pOther->TakeDamage( CTakeDamageInfo( this, this, pOther->GetHealth(), DMG_CRUSH ) );
+#endif
 	}
 
 	// If we're set to force ourselves closed, keep going

@@ -343,7 +343,6 @@ bool CWeaponShotgun::Reload( void )
 	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
-	m_bDelayFire = false;
 
 	FillClip();
 	// Play reload on different channel as otherwise steals channel away from fire sound
@@ -435,8 +434,6 @@ void CWeaponShotgun::DryFire( void )
 {
 	WeaponSound(EMPTY);
 	SendWeaponAnim( ACT_VM_DRYFIRE );
-	
-	m_bDelayFire = false;
 
 	m_flNextPrimaryAttack = gpGlobals->curtime + SequenceDuration();
 }
@@ -447,7 +444,6 @@ bool CWeaponShotgun::Deploy()
 	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	pPlayer->m_iShotsFired++;
-	m_bDelayFire = true;
 
 	return BaseClass::Deploy();
 }
@@ -508,9 +504,7 @@ void CWeaponShotgun::PrimaryAttack( void )
 	CSDKPlayer *pNewPlayer = ToSDKPlayer(pPlayer);
 
 	pNewPlayer->m_iShotsFired++;
-	m_bDelayFire = true;
 
-	m_iPrimaryAttacks++;
 	gamestats->Event_WeaponFired( pPlayer, true, GetClassname() );
 }
 
@@ -567,7 +561,6 @@ void CWeaponShotgun::SecondaryAttack( void )
 		m_bNeedPump = true;
 	}
 
-	m_iSecondaryAttacks++;
 	gamestats->Event_WeaponFired( pPlayer, false, GetClassname() );
 }
 	
@@ -761,8 +754,6 @@ CWeaponShotgun::CWeaponShotgun( void )
 	m_fMaxRange2		= 200;
 
 	SetTouchPickup( true );
-
-	m_bDelayFire = true;
 }
 
 //-----------------------------------------------------------------------------

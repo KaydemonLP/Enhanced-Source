@@ -478,8 +478,11 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 				data.m_vStart = trace.startpos;
 				data.m_nSurfaceProp = trace.surface.surfaceProps;
 				data.m_nHitBox = trace.hitbox;
-
+#ifdef OFFSHORE_DLL
+				data.m_hDamageType.AddToHead(TEAM_UNASSIGNED);
+#else
 				data.m_nDamageType = TEAM_UNASSIGNED;
+#endif
 
 				IClientNetworkable *pClient = cl_entitylist->GetClientEntity( clientIndex );
 
@@ -488,7 +491,11 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 					C_BasePlayer *pPlayer = dynamic_cast<C_BasePlayer*>(pClient);
 					if( pPlayer )
 					{
+#ifdef OFFSHORE_DLL
+						data.m_hDamageType.AddToHead(pPlayer->GetTeamNumber());
+#else
 						data.m_nDamageType = pPlayer->GetTeamNumber();
+#endif
 					}
 				}
 

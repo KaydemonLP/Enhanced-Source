@@ -140,12 +140,20 @@ bool CAmmoDef::CanCarryInfiniteAmmo(int nAmmoIndex)
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-int	CAmmoDef::DamageType(int nAmmoIndex)
+#ifdef OFFSHORE_DLL
+CUtlVector<int>	*CAmmoDef::DamageType(int nAmmoIndex)
+#else
+int CAmmoDef::DamageType(int nAmmoIndex)
+#endif
 {
 	if (nAmmoIndex < 1 || nAmmoIndex >= m_nAmmoIndex)
 		return 0;
 
+#ifdef OFFSHORE_DLL
+	return &m_AmmoType[nAmmoIndex].hDamageType;
+#else
 	return m_AmmoType[nAmmoIndex].nDamageType;
+#endif
 }
 
 
@@ -213,7 +221,11 @@ float CAmmoDef::DamageForce(int nAmmoIndex)
 // Does not increment m_nAmmoIndex because the functions below do so and 
 //  are the only entry point.
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+bool CAmmoDef::AddAmmoType(char const* name, CUtlVector<int> *damageType, int tracerType, int nFlags, int minSplashSize, int maxSplashSize )
+#else
 bool CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType, int nFlags, int minSplashSize, int maxSplashSize )
+#endif
 {
 	if (m_nAmmoIndex == MAX_AMMO_TYPES)
 		return false;
@@ -221,7 +233,11 @@ bool CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType, int
 	int len = strlen(name);
 	m_AmmoType[m_nAmmoIndex].pName = new char[len+1];
 	Q_strncpy(m_AmmoType[m_nAmmoIndex].pName, name,len+1);
+#ifdef OFFSHORE_DLL
+	m_AmmoType[m_nAmmoIndex].hDamageType	= *damageType;
+#else
 	m_AmmoType[m_nAmmoIndex].nDamageType	= damageType;
+#endif
 	m_AmmoType[m_nAmmoIndex].eTracerType	= tracerType;
 	m_AmmoType[m_nAmmoIndex].nMinSplashSize	= minSplashSize;
 	m_AmmoType[m_nAmmoIndex].nMaxSplashSize	= maxSplashSize;
@@ -233,7 +249,11 @@ bool CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType, int
 //-----------------------------------------------------------------------------
 // Purpose: Add an ammo type with it's damage & carrying capability specified via cvars
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CAmmoDef::AddAmmoType(char const* name, CUtlVector<int> *damageType, int tracerType, 
+#else
 void CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType, 
+#endif
 	char const* plr_cvar, char const* npc_cvar, char const* carry_cvar, 
 	float physicsForceImpulse, int nFlags, int minSplashSize, int maxSplashSize)
 {
@@ -274,7 +294,11 @@ void CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType,
 //-----------------------------------------------------------------------------
 // Purpose: Add an ammo type with it's damage & carrying capability specified via integers
 //-----------------------------------------------------------------------------
-void CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType, 
+#ifdef OFFSHORE_DLL
+void CAmmoDef::AddAmmoType(char const* name, CUtlVector<int> *damageType, int tracerType,
+#else
+void CAmmoDef::AddAmmoType(char const* name, int damageType, int tracerType,
+#endif
 	int plr_dmg, int npc_dmg, int carry, float physicsForceImpulse, 
 	int nFlags, int minSplashSize, int maxSplashSize )
 {

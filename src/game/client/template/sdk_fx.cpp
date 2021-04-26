@@ -9,10 +9,18 @@ void ImpactCallback( const CEffectData &data )
 
 	trace_t tr;
 	Vector vecOrigin, vecStart, vecShotDir;
-	int iMaterial, iDamageType, iHitbox;
+	int iMaterial, iHitbox;
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType;
+#else
+	int iDamageType;
+#endif
 	short nSurfaceProp;
+#ifdef OFFSHORE_DLL
+	C_BaseEntity* pEntity = ParseImpactData( data, &vecOrigin, &vecStart, &vecShotDir, nSurfaceProp, iMaterial, &hDamageType, iHitbox );
+#else
 	C_BaseEntity* pEntity = ParseImpactData( data, &vecOrigin, &vecStart, &vecShotDir, nSurfaceProp, iMaterial, iDamageType, iHitbox );
-
+#endif
 	if ( !pEntity )
 	{
 		// This happens for impacts that occur on an object that's then destroyed.
@@ -23,7 +31,11 @@ void ImpactCallback( const CEffectData &data )
 	}
 
 	// If we hit, perform our custom effects and play the sound
+#ifdef OFFSHORE_DLL
+	if ( Impact( vecOrigin, vecStart, iMaterial, &hDamageType, iHitbox, pEntity, tr ) )
+#else
 	if ( Impact( vecOrigin, vecStart, iMaterial, iDamageType, iHitbox, pEntity, tr ) )
+#endif	
 	{
 		// Check for custom effects based on the Decal index
 		PerformCustomEffects( vecOrigin, tr, vecShotDir, iMaterial, 1.0 );

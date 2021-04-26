@@ -50,7 +50,11 @@ public:
 
 	virtual void		Precache( void );
 
+#ifdef OFFSHORE_DLL
+	virtual void		Explode( trace_t *pTrace, CUtlVector<int> *hDamageType );
+#else
 	virtual void		Explode( trace_t *pTrace, int bitsDamageType );
+#endif
 	void				Smoke( void );
 
 	void				BounceTouch( CBaseEntity *pOther );

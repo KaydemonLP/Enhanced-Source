@@ -30,6 +30,10 @@
 #include "fmtstr.h"
 #include "videocfg/videocfg.h"
 
+#ifdef OFFSHORE_DLL
+#include "sdk_player.h"
+#include "of_shared_schemas.h"
+#endif
 
 
 #ifdef HL2_DLL
@@ -908,6 +912,80 @@ CON_COMMAND( say_team, "Display player message to team" )
 	}
 }
 
+#ifdef OFFSHORE_DLL
+CON_COMMAND( give_weapon, "Give weapon to player.\n\tArguments: <item_name>" )
+{
+	CSDKPlayer *pPlayer = ToSDKPlayer( UTIL_GetCommandClient() ); 
+	if ( pPlayer 
+		&& (gpGlobals->maxClients == 1 || sv_cheats->GetBool()) 
+		&& args.ArgC() >= 2 )
+	{
+		char item_to_give[ 256 ];
+		Q_strncpy( item_to_give, args[1], sizeof( item_to_give ) );
+		Q_strlower( item_to_give );
+
+		// Don't allow regular users to create point_servercommand entities for the same reason as blocking ent_fire
+		if ( !Q_stricmp( item_to_give, "point_servercommand" ) )
+		{
+			if ( engine->IsDedicatedServer() )
+			{
+				// We allow people with disabled autokick to do it, because they already have rcon.
+				if ( pPlayer->IsAutoKickDisabled() == false )
+					return;
+			}
+			else if ( gpGlobals->maxClients > 1 )
+			{
+				// On listen servers with more than 1 player, only allow the host to create point_servercommand.
+				CBasePlayer *pHostPlayer = UTIL_GetListenServerHost();
+				if ( pPlayer != pHostPlayer )
+					return;
+			}
+		}
+		
+		CBaseSDKCombatWeapon *pEnt = dynamic_cast<CBaseSDKCombatWeapon*>( pPlayer->GiveNamedItem(item_to_give) );
+
+		if( pEnt )
+			pPlayer->Weapon_Switch( pEnt );
+	}
+}
+
+CON_COMMAND( add_attributes, "Add attributes to the active weapon\n\tArguments: <attribute id> <value>" )
+{
+	CSDKPlayer *pPlayer = ToSDKPlayer( UTIL_GetCommandClient() ); 
+	if ( pPlayer 
+		&& (gpGlobals->maxClients == 1 || sv_cheats->GetBool()) 
+		&& args.ArgC() >= 3 )
+	{
+		if( pPlayer->GetActiveWeapon() )
+		{
+			for( int i = 1; i < args.ArgC(); i += 2 )
+			{
+				CTFAttribute hAttribute(Q_atoi(args[i]), args[i + 1]);
+				pPlayer->GetActiveWeapon()->AddAttribute(hAttribute);
+			}
+		}
+	}
+}
+
+CON_COMMAND( set_attributes, "Sets the attributes of the active weapon\n\tArguments: <attribute id> <value>" )
+{
+	CSDKPlayer *pPlayer = ToSDKPlayer( UTIL_GetCommandClient() ); 
+	if ( pPlayer 
+		&& (gpGlobals->maxClients == 1 || sv_cheats->GetBool()) 
+		&& args.ArgC() >= 3 )
+	{
+		if( pPlayer->GetActiveWeapon() )
+		{
+			pPlayer->GetActiveWeapon()->PurgeAttributes();
+			for( int i = 1; i < args.ArgC(); i += 2 )
+			{
+				CTFAttribute hAttribute(Q_atoi(args[i]), args[i + 1]);
+				pPlayer->GetActiveWeapon()->AddAttribute(hAttribute);
+			}
+		}
+	}
+}
+#endif
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -1598,8 +1676,13 @@ void CC_HurtMe_f(const CCommand &args)
 	{
 		iDamage = atoi( args[ 1 ] );
 	}
-
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+	pPlayer->TakeDamage( CTakeDamageInfo( pPlayer, pPlayer, iDamage, &hDamage ) );
+#else
 	pPlayer->TakeDamage( CTakeDamageInfo( pPlayer, pPlayer, iDamage, DMG_GENERIC ) );
+#endif
+	
 }
 
 static ConCommand hurtme("hurtme", CC_HurtMe_f, "Hurts the player.\n\tArguments: <health to lose>", FCVAR_CHEAT);

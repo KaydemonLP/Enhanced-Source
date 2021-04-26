@@ -333,7 +333,11 @@ void		UTIL_BloodStream( const Vector &origin, const Vector &direction, int color
 void		UTIL_BloodSpray( const Vector &pos, const Vector &dir, int color, int amount, int flags );
 void		UTIL_BloodSprayPrecache();
 Vector		UTIL_RandomBloodVector( void );
+#ifdef OFFSHORE_DLL
+void		UTIL_ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName = NULL );
+#else
 void		UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName = NULL );
+#endif
 void		UTIL_PlayerDecalTrace( trace_t *pTrace, int playernum );
 void		UTIL_Smoke( const Vector &origin, const float scale, const float framerate );
 void		UTIL_AxisStringToPointDir( Vector &start, Vector &dir, const char *pString );

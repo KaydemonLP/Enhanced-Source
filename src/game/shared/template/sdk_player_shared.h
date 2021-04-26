@@ -15,4 +15,4 @@
 #include "template/sdk_player.h"
 #endif
 
-#define GetClass(x) GetClassManager()->m_hClassInfo[x->GetClassNumber()]
+#define GetClass(x) ClassManager()->m_hClassInfo[x->GetClassNumber()]

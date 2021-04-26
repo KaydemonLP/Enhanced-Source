@@ -139,7 +139,13 @@ void DispatchParticleEffect( const char *pszParticleName, ParticleAttachment_t i
 #endif
 		data.m_fFlags |= PARTICLE_DISPATCH_FROM_ENTITY;
 	}
+#ifdef OFFSHORE_DLL
+	// Yowch, this could cause problems
+	// soooo, set the absolute first thing to the attachment - Kay
+	data.m_hDamageType.AddToHead(iAttachType);
+#else
 	data.m_nDamageType = iAttachType;
+#endif
 	data.m_nAttachmentIndex = iAttachmentPoint;
 
 	if ( bResetAllParticlesOnEntity )
@@ -182,7 +188,12 @@ void DispatchParticleEffectLink( const char *pszParticleName, ParticleAttachment
 
 		data.m_fFlags |= PARTICLE_DISPATCH_FROM_ENTITY;
 	}
+
+#ifdef OFFSHORE_DLL
+	data.m_hDamageType.AddToHead(iAttachType);
+#else
 	data.m_nDamageType = iAttachType;
+#endif
 	data.m_nAttachmentIndex = iAttachmentPoint;
 
 	if ( bResetAllParticlesOnEntity )
@@ -218,7 +229,11 @@ void DispatchParticleEffect( int nEffectIndex, const Vector &vecOrigin, const QA
 		data.m_nEntIndex = pEntity->entindex();
 #endif
 		data.m_fFlags |= PARTICLE_DISPATCH_FROM_ENTITY;
+#ifdef OFFSHORE_DLL
+		data.m_hDamageType.AddToHead(iAttachType);
+#else
 		data.m_nDamageType = iAttachType;
+#endif
 	}
 	else
 	{
@@ -264,7 +279,12 @@ void DispatchParticleEffect( int iEffectIndex, Vector vecOrigin, Vector vecStart
 		data.m_nEntIndex = pEntity->entindex();
 #endif
 		data.m_fFlags |= PARTICLE_DISPATCH_FROM_ENTITY;
+#ifdef OFFSHORE_DLL
+		data.m_hDamageType.AddToHead(PATTACH_CUSTOMORIGIN);
+#else
 		data.m_nDamageType = PATTACH_CUSTOMORIGIN;
+#endif
+		
 	}
 	else
 	{

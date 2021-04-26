@@ -1147,7 +1147,13 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 		}
 		else
 		{
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage;
+			hDamage.AddToTail(DMG_CRUSH);
+			pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, &hDamage ) );
+#else
 			pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
+#endif
 		}
 	}
 

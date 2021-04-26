@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include "sdk_player_shared.h"
 #include "of_weaponbase.h"
 #include "basecombatweapon_shared.h"
 #include "in_buttons.h"
@@ -12,7 +13,8 @@
 #include "weapon_parse.h"
 #include "physics_saverestore.h"
 #include "of_shared_schemas.h"
-#include "sdk_player_shared.h"
+#include "datacache/imdlcache.h"
+#include "activitylist.h"
 
 #if defined( CLIENT_DLL )
 
@@ -32,15 +34,19 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-LINK_ENTITY_TO_CLASS( basesdkcombatweapon, CBaseSDKCombatWeapon );
+LINK_ENTITY_TO_CLASS( of_weaponbase, CBaseSDKCombatWeapon );
 
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseSDKCombatWeapon , DT_BaseSDKCombatWeapon )
 
 BEGIN_NETWORK_TABLE( CBaseSDKCombatWeapon , DT_BaseSDKCombatWeapon )
 #if !defined( CLIENT_DLL )
+	SendPropInt( SENDINFO( m_iReserveAmmo ) ),
+	SendPropInt( SENDINFO( m_iReloadStage ) ),
 //	SendPropInt( SENDINFO( m_bReflectViewModelAnimations ), 1, SPROP_UNSIGNED ),
 #else
 //	RecvPropInt( RECVINFO( m_bReflectViewModelAnimations ) ),
+	RecvPropInt( RECVINFO( m_iReserveAmmo ) ),
+	RecvPropInt( RECVINFO( m_iReloadStage ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -67,9 +73,6 @@ BEGIN_DATADESC( CBaseSDKCombatWeapon )
 	DEFINE_FIELD( m_bLowered,			FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_flRaiseTime,		FIELD_TIME ),
 	DEFINE_FIELD( m_flHolsterTime,		FIELD_TIME ),
-	DEFINE_FIELD( m_iPrimaryAttacks,	FIELD_INTEGER ),
-	DEFINE_FIELD( m_iSecondaryAttacks,	FIELD_INTEGER ),
-
 
 END_DATADESC()
 
@@ -88,7 +91,8 @@ CBaseSDKCombatWeapon::CBaseSDKCombatWeapon()
 #endif
 
 	m_bForcePickup = true;
-	m_bDelayFire = true;
+
+	m_iReloadStage = OF_RELOAD_STAGE_NONE;
 }
 
 //-----------------------------------------------------------------------------
@@ -108,18 +112,33 @@ CBaseSDKCombatWeapon::~CBaseSDKCombatWeapon( void )
 }
 
 //-----------------------------------------------------------------------------
+// Purpoise: Basically used to load the proper weapon info
+//				It's a bit hacky, but not all that bad
+//				If it causes problems, make this a copy of the basecombatweapon precache
+//				But with GetClassname() replaced with GetSchemaName()
+//-----------------------------------------------------------------------------
+void CBaseSDKCombatWeapon::Precache( void )
+{
+	// CLIENT DOES THE PRECACHE FUNCTIONS IN UPDATE CLIENT DATA
+	// BECAUSE THE SCHEMA NAME DOESN'T GET NETWORKED AT THIS POINT!
+#ifdef GAME_DLL
+	BaseClass::Precache();
+#endif
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CBaseSDKCombatWeapon::SetPickupTouch( void )
 {
 #if !defined( CLIENT_DLL )
 
-	if (!m_bForcePickup )
+	if( !m_bForcePickup )
 	{	
 		return;
 	}
 
-	SetTouch(&CBaseCombatWeapon::DefaultTouch);
+	SetTouch( &CBaseCombatWeapon::DefaultTouch );
 
 	if ( gpGlobals->maxClients > 1 )
 	{
@@ -141,7 +160,6 @@ void CBaseSDKCombatWeapon::SetPickupTouch( void )
 //-----------------------------------------------------------------------------
 void CBaseSDKCombatWeapon::Equip( CBaseCombatCharacter *pOwner )
 {
-
 	// Attach the weapon to an owner
 	SetAbsVelocity( vec3_origin );
 	RemoveSolidFlags( FSOLID_TRIGGER );
@@ -237,7 +255,17 @@ void CBaseSDKCombatWeapon::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 #endif
 }
 //#endif
+#ifdef CLIENT_DLL
+void CBaseSDKCombatWeapon::PostDataUpdate( DataUpdateType_t updateType )
+{
+	BaseClass::PostDataUpdate( updateType );
 
+	if( updateType == DATA_UPDATE_CREATED && !IsClientCreated() )
+	{
+		BaseClass::Precache();
+	}
+}
+#endif
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -292,7 +320,7 @@ bool CBaseSDKCombatWeapon::Lower( void )
 bool CBaseSDKCombatWeapon::Ready( void )
 {
 	//Don't bother if we don't have the animation
-	if ( SelectWeightedSequence( ACT_VM_LOWERED_TO_IDLE ) == ACTIVITY_NOT_AVAILABLE )
+	if( SelectWeightedSequence( ACT_VM_LOWERED_TO_IDLE ) == ACTIVITY_NOT_AVAILABLE )
 		return false;
 
 	m_bLowered = false;	
@@ -308,21 +336,32 @@ bool CBaseSDKCombatWeapon::Deploy( void )
 {
 
 #ifndef CLIENT_DLL
-	m_flDecreaseShotsFired = gpGlobals->curtime;
-
 	CBasePlayer *pFakePlayer = GetPlayerOwner();
 	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
 
 	if ( pPlayer )
 	{
 		pPlayer->m_iShotsFired = 0;
-		m_bDelayFire = false;
 	}
 #endif
 
 	m_bLowered = false;
 
-	return BaseClass::Deploy();
+	bool bRet = BaseClass::Deploy();
+
+	if( bRet )
+	{
+		CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
+		if ( pOwner )
+		{
+			pOwner->SetNextAttack( gpGlobals->curtime + GetDrawTime() );
+		}
+
+		// Can't shoot again until we've finished deploying
+		m_flNextPrimaryAttack = gpGlobals->curtime + GetDrawTime();
+		m_flNextSecondaryAttack = gpGlobals->curtime + GetDrawTime();
+	}
+	return bRet;
 }
 
 //-----------------------------------------------------------------------------
@@ -332,23 +371,269 @@ void CBaseSDKCombatWeapon::DryFire( void )
 {
 	WeaponSound( EMPTY );
 	SendWeaponAnim( ACT_VM_DRYFIRE );
-
-	m_bDelayFire = false;
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Secondary fire button attack
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CBaseSDKCombatWeapon::Reload(void)
+{
+	CBaseCombatCharacter *pOwner = GetOwner();
+	if( !pOwner )
+		return false;
+
+	// If I don't have any spare ammo, I can't reload
+	if ( !GetReserveAmmo() )
+		return false;
+
+	bool bReload = false;
+
+	// If you don't have clips, then don't try to reload them.
+	if ( UsesClipsForAmmo1() )
+	{
+		// need to reload primary clip?
+		int primary	= MIN(GetMaxClip1() - m_iClip1, GetReserveAmmo());
+		if ( primary != 0 )
+		{
+			bReload = true;
+		}
+	}
+
+	if ( UsesClipsForAmmo2() )
+	{
+		// need to reload secondary clip?
+		int secondary = MIN(GetMaxClip2() - m_iClip2, GetReserveAmmo/*2*/());
+		if ( secondary != 0 )
+		{
+			bReload = true;
+		}
+	}
+
+	if ( !bReload )
+		return false;
+
+#ifdef CLIENT_DLL
+	// Play reload
+	WeaponSound( RELOAD );
+#endif
+	int iActivity = ACT_VM_RELOAD;
+	
+	int g_ReloadSinglyActTable[] = {
+		ACT_VM_RELOAD_START,// OF_RELOAD_STAGE_NONE
+		ACT_VM_RELOAD,// OF_RELOAD_STAGE_START
+		ACT_VM_RELOAD,// OF_RELOAD_STAGE_LOOP
+		ACT_VM_RELOAD_END// OF_RELOAD_STAGE_END
+	};
+
+	if( ReloadsSingly() )
+		iActivity = g_ReloadSinglyActTable[m_iReloadStage];
+
+	DevMsg( "Playing VM activity: %s\n", ActivityList_NameForIndex(iActivity) );
+
+	SendWeaponAnim( iActivity );
+
+	// Play the player's reload animation
+	if ( pOwner->IsPlayer() )
+	{
+		( ( CBasePlayer * )pOwner)->SetAnimation( PLAYER_RELOAD );
+	}
+
+	MDLCACHE_CRITICAL_SECTION();
+	float flAttackEndTime = gpGlobals->curtime + GetReloadTime();
+	if( ReloadsSingly() && m_iReloadStage == OF_RELOAD_STAGE_NONE )
+	{
+		flAttackEndTime = gpGlobals->curtime + GetReloadStartTime();
+	}
+
+	pOwner->SetNextAttack( flAttackEndTime );
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = flAttackEndTime;
+
+	m_bInReload = true;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
 //-----------------------------------------------------------------------------
 void CBaseSDKCombatWeapon::PrimaryAttack( void )
 {
-	BaseClass::PrimaryAttack();
+	// Empty For now
+}
 
-	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
+//-----------------------------------------------------------------------------
+// Purpose: Returns true if the weapon currently has ammo or doesn't need ammo
+// Output :
+//-----------------------------------------------------------------------------
+bool CBaseSDKCombatWeapon::HasPrimaryAmmo( void )
+{
+	// If I use a clip, and have some ammo in it, then I have ammo
+	if ( UsesClipsForAmmo1() )
+	{
+		if ( m_iClip1 > 0 )
+			return true;
+	}
 
-	pPlayer->m_iShotsFired++;
-	m_bDelayFire = true;
+	// Otherwise, I have ammo if I have some in my ammo counts
+	if ( GetReserveAmmo() > 0 ) 
+		return true;
 
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns true if the weapon currently has ammo or doesn't need ammo
+// Output :
+//-----------------------------------------------------------------------------
+bool CBaseSDKCombatWeapon::HasSecondaryAmmo( void )
+{
+	// If I use a clip, and have some ammo in it, then I have ammo
+	if ( UsesClipsForAmmo2() )
+	{
+		if ( m_iClip2 > 0 )
+			return true;
+	}
+
+	// Otherwise, I have ammo if I have some in my ammo counts
+	if ( GetReserveAmmo() > 0 ) 
+		return true;
+
+	return false;
+}
+
+int	CBaseSDKCombatWeapon::GetReserveAmmo( void )
+{
+	return m_iReserveAmmo;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Remove a certain amount of ammo from the Clip
+//-----------------------------------------------------------------------------
+void CBaseSDKCombatWeapon::RemoveFromClip1( int iAmount )
+{
+	m_iClip1 -= iAmount;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Likewise but for Clip2
+//-----------------------------------------------------------------------------
+void CBaseSDKCombatWeapon::RemoveFromClip2( int iAmount )
+{
+	m_iClip2 -= iAmount;
+}
+
+
+void CBaseSDKCombatWeapon::RemoveFromReserveAmmo( int iAmount )
+{
+	m_iReserveAmmo -= iAmount;
+}
+
+int	CBaseSDKCombatWeapon::GetMaxReserveAmmo( void )
+{
+	return GetSDKWpnData().m_iReserveAmmo;
+}
+
+//====================================================================================
+// WEAPON RELOAD TYPES
+//====================================================================================
+void CBaseSDKCombatWeapon::CheckReload( void )
+{
+	if ( ReloadsSingly() )
+	{
+		CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
+		if ( !pOwner )
+			return;
+
+		if( (m_bInReload) && (m_flNextPrimaryAttack <= gpGlobals->curtime) )
+		{
+			if( pOwner->m_nButtons & (IN_ATTACK | IN_ATTACK2) && m_iClip1 > 0 )
+			{
+				m_bInReload = false;
+				return;
+			}
+
+			if( m_iReloadStage == OF_RELOAD_STAGE_NONE )
+			{
+				m_iReloadStage++;
+				Reload();
+				return;
+			}
+
+			// If out of ammo end reload
+			if( !GetReserveAmmo() )
+			{
+				FinishReload();
+				return;
+			}
+			// If clip not full reload again
+			else if( m_iClip1 < GetMaxClip1() )
+			{
+				// Add them to the clip
+				m_iClip1 += 1;
+				RemoveFromReserveAmmo( 1 );
+
+				m_iReloadStage = OF_RELOAD_STAGE_LOOP;
+
+				Reload();
+				return;
+			}
+			// Clip full, stop reloading
+			else
+			{
+				FinishReload();
+				m_flNextPrimaryAttack	= gpGlobals->curtime;
+				m_flNextSecondaryAttack = gpGlobals->curtime;
+				return;
+			}
+		}
+	}
+	else
+	{
+		if ( (m_bInReload) && (m_flNextPrimaryAttack <= gpGlobals->curtime))
+		{
+			// If I use primary clips, reload primary
+			if ( UsesClipsForAmmo1() )
+			{
+				int primary	= MIN( GetMaxClip1() - m_iClip1, GetReserveAmmo() );	
+				m_iClip1 += primary;
+				RemoveFromReserveAmmo( primary );
+			}
+
+			// If I use secondary clips, reload secondary
+			if ( UsesClipsForAmmo2() )
+			{
+				int secondary = MIN( GetMaxClip2() - m_iClip2, GetReserveAmmo/*2*/() );
+				m_iClip2 += secondary;
+				RemoveFromReserveAmmo/*2*/( secondary );
+			}
+
+			FinishReload();
+			m_flNextPrimaryAttack	= gpGlobals->curtime;
+			m_flNextSecondaryAttack = gpGlobals->curtime;
+			m_bInReload = false;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reload has finished.
+//-----------------------------------------------------------------------------
+void CBaseSDKCombatWeapon::FinishReload( void )
+{
+	if ( ReloadsSingly() )
+	{
+		// In case there's no end anim, don't just skip over the reload anim
+		m_iReloadStage = OF_RELOAD_STAGE_NONE;
+
+		if( GetPlayerOwner() && GetPlayerOwner()->GetActiveWeapon() == this )
+		{
+			float flBackupIdle = GetWeaponIdleTime();
+			SendWeaponAnim( ACT_VM_RELOAD_END );
+			SetWeaponIdleTime( gpGlobals->curtime + MAX(SequenceDuration(), flBackupIdle) );
+		}
+	}
+
+	m_bInReload = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -356,29 +641,111 @@ void CBaseSDKCombatWeapon::PrimaryAttack( void )
 //-----------------------------------------------------------------------------
 void CBaseSDKCombatWeapon::ItemPostFrame()
 {
-	CBasePlayer *pFakePlayer = GetPlayerOwner();
-	CSDKPlayer *pPlayer = ToSDKPlayer(pFakePlayer);
+	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
+	if( !pOwner )
+		return;
 
-	if ( !(pPlayer->m_nButtons & (IN_ATTACK|IN_ATTACK2) ) )
+	//Track the duration of the fire
+	//FIXME: Check for IN_ATTACK2 as well?
+	//FIXME: What if we're calling ItemBusyFrame?
+	m_fFireDuration = ( pOwner->m_nButtons & IN_ATTACK ) ? ( m_fFireDuration + gpGlobals->frametime ) : 0.0f;
+
+	if ( UsesClipsForAmmo1() )
 	{
-		if ( m_bDelayFire )
-		{
-			m_bDelayFire = false;
+		CheckReload();
+	}
 
-			if (pPlayer->m_iShotsFired > 15)
-				pPlayer->m_iShotsFired = 15;
-			
-			m_flDecreaseShotsFired = gpGlobals->curtime + 0.4;
+	bool bFired = false;
+
+	// Secondary attack has priority
+	if( (pOwner->m_nButtons & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->curtime) )
+	{
+		if (UsesSecondaryAmmo() && GetReserveAmmo/*2*/() )
+		{
+			if (m_flNextEmptySoundTime < gpGlobals->curtime)
+			{
+				WeaponSound(EMPTY);
+				m_flNextSecondaryAttack = m_flNextEmptySoundTime = gpGlobals->curtime + 0.5;
+			}
 		}
-
-		if ( (pPlayer->m_iShotsFired > 0) && (m_flDecreaseShotsFired < gpGlobals->curtime)	)
+		else if (pOwner->GetWaterLevel() == 3 && m_bAltFiresUnderwater == false)
 		{
-			m_flDecreaseShotsFired = gpGlobals->curtime + 0.0225;
-			pPlayer->m_iShotsFired--;
+			// This weapon doesn't fire underwater
+			WeaponSound(EMPTY);
+			m_flNextPrimaryAttack = gpGlobals->curtime + 0.2;
+			return;
+		}
+		else
+		{
+			SecondaryAttack();
+
+			// Secondary ammo doesn't have a reload animation
+			if( UsesClipsForAmmo2() )
+			{
+				// reload clip2 if empty
+				if( m_iClip2 < 1 )
+				{
+					RemoveFromReserveAmmo( 1 );
+					m_iClip2 = m_iClip2 + 1;
+				}
+			}
+		}
+	}
+	
+	if( !bFired && ( pOwner->m_nButtons & IN_ATTACK ) && ( m_flNextPrimaryAttack <= gpGlobals->curtime ) )
+	{
+		// Clip empty? Or out of ammo on a no-clip weapon?
+		if ( !IsMeleeWeapon() &&  
+			(( UsesClipsForAmmo1() && m_iClip1 <= 0) || ( !UsesClipsForAmmo1() && GetReserveAmmo() )) )
+		{
+			HandleFireOnEmpty();
+		}
+		else if( pOwner->GetWaterLevel() == 3 && m_bFiresUnderwater == false )
+		{
+			// This weapon doesn't fire underwater
+			WeaponSound(EMPTY);
+			m_flNextPrimaryAttack = gpGlobals->curtime + 0.2;
+			return;
+		}
+		else
+		{
+			//NOTENOTE: There is a bug with this code with regards to the way machine guns catch the leading edge trigger
+			//			on the player hitting the attack key.  It relies on the gun catching that case in the same frame.
+			//			However, because the player can also be doing a secondary attack, the edge trigger may be missed.
+			//			We really need to hold onto the edge trigger and only clear the condition when the gun has fired its
+			//			first shot.  Right now that's too much of an architecture change -- jdw
+			
+			// If the firing button was just pressed, or the alt-fire just released, reset the firing time
+			if( ( pOwner->m_afButtonPressed & IN_ATTACK ) || ( pOwner->m_afButtonReleased & IN_ATTACK2 ) )
+			{
+				 m_flNextPrimaryAttack = gpGlobals->curtime;
+			}
+
+			PrimaryAttack();
 		}
 	}
 
-	BaseClass::ItemPostFrame();
+	// -----------------------
+	//  Reload pressed / Clip Empty
+	// -----------------------
+	if( (pOwner->m_nButtons & IN_RELOAD) && UsesClipsForAmmo1() && !m_bInReload && ( m_flNextPrimaryAttack <= gpGlobals->curtime ) ) 
+	{
+		// reload when reload is pressed, or if no buttons are down and weapon is empty.
+		Reload();
+		m_fFireDuration = 0.0f;
+	}
+
+	// -----------------------
+	//  No buttons down
+	// -----------------------
+	if( !( (pOwner->m_nButtons & IN_ATTACK) || ( pOwner->m_nButtons & IN_ATTACK2 ) || ( pOwner->m_nButtons & IN_RELOAD )) )
+	{
+		// no fire buttons down or reloading
+		if ( ( m_bInReload == false ) && !ReloadOrSwitchWeapons() )
+		{
+			WeaponIdle();
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -404,6 +771,11 @@ const CSDKWeaponInfo &CBaseSDKCombatWeapon::GetSDKWpnData( void ) const
 CBasePlayer* CBaseSDKCombatWeapon::GetPlayerOwner() const
 {
 	return dynamic_cast< CBasePlayer* >( GetOwner() );
+}
+
+CSDKPlayer* CBaseSDKCombatWeapon::GetSDKPlayerOwner() const
+{
+	return dynamic_cast< CSDKPlayer* >( GetOwner() );
 }
 
 //For some reason, ASW has a problem calling our WeaponData
@@ -437,21 +809,6 @@ bool CBaseSDKCombatWeapon::Holster( CBaseCombatWeapon *pSwitchingTo )
 //-----------------------------------------------------------------------------
 bool CBaseSDKCombatWeapon::WeaponShouldBeLowered( void )
 {
-	// Can't be in the middle of another animation
-  	if ( GetIdealActivity() != ACT_VM_IDLE_LOWERED && GetIdealActivity() != ACT_VM_IDLE &&
-		 GetIdealActivity() != ACT_VM_IDLE_TO_LOWERED && GetIdealActivity() != ACT_VM_LOWERED_TO_IDLE )
-  		return false;
-
-	if ( m_bLowered )
-		return true;
-	
-#if !defined( CLIENT_DLL )
-
-	if ( GlobalEntity_GetState( "friendly_encounter" ) == GLOBAL_ON )
-		return true;
-
-#endif
-
 	return false;
 }
 
@@ -498,129 +855,40 @@ void CBaseSDKCombatWeapon::WeaponIdle( void )
 	}
 }
 
+float CBaseSDKCombatWeapon::GetDamage( void )
+{
+	return (float)GetSDKWpnData().m_iDamage;
+}
+
+float CBaseSDKCombatWeapon::GetDrawTime( void )
+{
+	return GetSDKWpnData().m_flDrawTime;
+}
+
+float CBaseSDKCombatWeapon::GetFireRate( void )
+{
+	return GetSDKWpnData().m_flFireRate;
+}
+
+float CBaseSDKCombatWeapon::GetReloadStartTime( void )
+{
+	return GetSDKWpnData().m_flReloadStartTime >= 0 ? GetSDKWpnData().m_flReloadStartTime : SequenceDuration();
+}
+
+float CBaseSDKCombatWeapon::GetReloadTime( void )
+{
+	return GetSDKWpnData().m_flReloadTime >= 0 ? GetSDKWpnData().m_flReloadTime : SequenceDuration();
+}
+
+bool CBaseSDKCombatWeapon::ReloadsSingly( void )
+{
+	return GetSDKWpnData().m_bReloadSingly;
+}
+
 float	g_lateralBob;
 float	g_verticalBob;
 
 #if defined( CLIENT_DLL ) && ( !defined( HL2MP ) && !defined( PORTAL ) )
-
-#define	HL2_BOB_CYCLE_MIN	1.0f
-#define	HL2_BOB_CYCLE_MAX	(GetClass(player).flStepSpeed / 1000.0f)
-#define	HL2_BOB			cl_bob.GetFloat()
-#define	HL2_BOB_UP		cl_bobup.GetFloat()
-
-
-static ConVar	cl_bobcycle( "cl_bobcycle","0.45" );
-static ConVar	cl_bob( "cl_bob","0.002" );
-static ConVar	cl_bobup( "cl_bobup","0.5" );
-
-// Register these cvars if needed for easy tweaking
-static ConVar	v_iyaw_cycle( "v_iyaw_cycle", "2"/*, FCVAR_UNREGISTERED*/ );
-static ConVar	v_iroll_cycle( "v_iroll_cycle", "0.5"/*, FCVAR_UNREGISTERED*/ );
-static ConVar	v_ipitch_cycle( "v_ipitch_cycle", "1"/*, FCVAR_UNREGISTERED*/ );
-static ConVar	v_iyaw_level( "v_iyaw_level", "0.3"/*, FCVAR_UNREGISTERED*/ );
-static ConVar	v_iroll_level( "v_iroll_level", "0.1"/*, FCVAR_UNREGISTERED*/ );
-static ConVar	v_ipitch_level( "v_ipitch_level", "0.3"/*, FCVAR_UNREGISTERED*/ );
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Output : float
-//-----------------------------------------------------------------------------
-float CBaseSDKCombatWeapon::CalcViewmodelBob( void )
-{
-	static	float bobtime;
-	static	float lastbobtime;
-	float	cycle;
-	
-	CSDKPlayer *player = ToSDKPlayer( GetOwner() );
-	//Assert( player );
-
-	//NOTENOTE: For now, let this cycle continue when in the air, because it snaps badly without it
-
-	if ( ( !gpGlobals->frametime ) || ( player == NULL ) )
-	{
-		//NOTENOTE: We don't use this return value in our case (need to restructure the calculation function setup!)
-		return 0.0f;// just use old value
-	}
-
-	//Find the speed of the player
-	float speed = player->GetLocalVelocity().Length2D();
-
-	//FIXME: This maximum speed value must come from the server.
-	//		 MaxSpeed() is not sufficient for dealing with sprinting - jdw
-
-	speed = clamp( speed, -player->GetPlayerMaxSpeed(), player->GetPlayerMaxSpeed() );
-
-	float bob_offset = RemapVal( speed, 0, player->GetPlayerMaxSpeed(), 0.0f, 1.0f );
-	
-	bobtime += ( gpGlobals->curtime - lastbobtime ) * bob_offset;
-	lastbobtime = gpGlobals->curtime;
-
-	//Calculate the vertical bob
-	cycle = bobtime - (int)(bobtime/HL2_BOB_CYCLE_MAX)*HL2_BOB_CYCLE_MAX;
-	cycle /= HL2_BOB_CYCLE_MAX;
-
-	if ( cycle < HL2_BOB_UP )
-	{
-		cycle = M_PI * cycle / HL2_BOB_UP;
-	}
-	else
-	{
-		cycle = M_PI + M_PI*(cycle-HL2_BOB_UP)/(1.0 - HL2_BOB_UP);
-	}
-	
-	g_verticalBob = speed*0.005f;
-	g_verticalBob = g_verticalBob*0.3 + g_verticalBob*0.7*sin(cycle);
-
-	g_verticalBob = clamp( g_verticalBob, -7.0f, 4.0f );
-
-	//Calculate the lateral bob
-	cycle = bobtime - (int)(bobtime/HL2_BOB_CYCLE_MAX*2)*HL2_BOB_CYCLE_MAX*2;
-	cycle /= HL2_BOB_CYCLE_MAX*2;
-
-	if ( cycle < HL2_BOB_UP )
-	{
-		cycle = M_PI * cycle / HL2_BOB_UP;
-	}
-	else
-	{
-		cycle = M_PI + M_PI*(cycle-HL2_BOB_UP)/(1.0 - HL2_BOB_UP);
-	}
-
-	g_lateralBob = speed*0.005f;
-	g_lateralBob = g_lateralBob*0.3 + g_lateralBob*0.7*sin(cycle);
-	g_lateralBob = clamp( g_lateralBob, -7.0f, 4.0f );
-	
-	//NOTENOTE: We don't use this return value in our case (need to restructure the calculation function setup!)
-	return 0.0f;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : &origin - 
-//			&angles - 
-//			viewmodelindex - 
-//-----------------------------------------------------------------------------
-void CBaseSDKCombatWeapon::AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles )
-{
-	Vector	forward, right;
-	AngleVectors( angles, &forward, &right, NULL );
-
-	CalcViewmodelBob();
-
-	// Apply bob, but scaled down to 40%
-	VectorMA( origin, g_verticalBob * 0.1f, forward, origin );
-	
-	// Z bob a bit more
-	origin[2] += g_verticalBob * 0.1f;
-	
-	// bob the angles
-	angles[ ROLL ]	+= g_verticalBob * 0.5f;
-	angles[ PITCH ]	-= g_verticalBob * 0.4f;
-
-	angles[ YAW ]	-= g_lateralBob  * 0.3f;
-
-	VectorMA( origin, g_lateralBob * 0.8f, right, origin );
-}
 
 //-----------------------------------------------------------------------------
 Vector CBaseSDKCombatWeapon::GetBulletSpread( WeaponProficiency_t proficiency )
@@ -641,22 +909,6 @@ const WeaponProficiencyInfo_t *CBaseSDKCombatWeapon::GetProficiencyValues()
 }
 
 #else
-
-// Server stubs
-float CBaseSDKCombatWeapon::CalcViewmodelBob( void )
-{
-	return 0.0f;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : &origin - 
-//			&angles - 
-//			viewmodelindex - 
-//-----------------------------------------------------------------------------
-void CBaseSDKCombatWeapon::AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles )
-{
-}
 
 
 //-----------------------------------------------------------------------------

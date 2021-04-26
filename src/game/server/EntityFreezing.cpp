@@ -121,7 +121,14 @@ CEntityFreezing *CEntityFreezing::Create( CBaseAnimating *pTarget )
 			// Simply immediately kill the player.
 			CBasePlayer *pPlayer = assert_cast< CBasePlayer* >( pTarget );
 			pPlayer->SetArmorValue( 0 );
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage;
+			hDamage.AddToTail(DMG_GENERIC); hDamage.AddToTail(DMG_REMOVENORAGDOLL); hDamage.AddToTail(DMG_PREVENT_PHYSICS_FORCE);
+			CTakeDamageInfo info( pPlayer, pPlayer, pPlayer->GetHealth(), &hDamage );
+#else
 			CTakeDamageInfo info( pPlayer, pPlayer, pPlayer->GetHealth(), DMG_GENERIC | DMG_REMOVENORAGDOLL | DMG_PREVENT_PHYSICS_FORCE );
+#endif
+			
 			pPlayer->TakeDamage( info );
 			return NULL;
 		}

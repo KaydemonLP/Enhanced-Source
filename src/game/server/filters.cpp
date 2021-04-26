@@ -432,10 +432,29 @@ protected:
 
 	bool PassesDamageFilterImpl(const CTakeDamageInfo &info)
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageTypes; hDamageTypes = *info.GetDamageTypes();
+		hDamageTypes.FindAndRemove(DMG_DIRECT);
+
+		if( m_hDamageType.Count() != hDamageTypes.Count() )
+			return false;
+
+		FOR_EACH_VEC(m_hDamageType, i)
+		{
+			if( !hDamageTypes.HasElement(m_hDamageType[i]) )
+				return false;
+		}
+		return true;
+#else
 	 	return (info.GetDamageType() & ~DMG_DIRECT) == m_iDamageType;
+#endif
 	}
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> m_hDamageType;
+#else
 	int m_iDamageType;
+#endif
 };
 
 LINK_ENTITY_TO_CLASS( filter_damage_type, FilterDamageType );
@@ -443,7 +462,9 @@ LINK_ENTITY_TO_CLASS( filter_damage_type, FilterDamageType );
 BEGIN_DATADESC( FilterDamageType )
 
 	// Keyfields
+#ifndef OFFSHORE_DLL
 	DEFINE_KEYFIELD( m_iDamageType,	FIELD_INTEGER,	"damagetype" ),
+#endif
 
 END_DATADESC()
 

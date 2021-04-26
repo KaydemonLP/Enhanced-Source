@@ -30,7 +30,11 @@ public:
 	virtual CollideType_t	GetCollideType( void ) { return ENTITY_SHOULD_RESPOND; }
 	virtual void			StartTouch( C_BaseEntity *pOther );
 	virtual	void			HitSurface( C_BaseEntity *pOther );
+#ifdef OFFSHORE_DLL
+	virtual	void			ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName );
+#else
 	virtual	void			ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName );
+#endif
 	virtual	bool			IsClientCreated( void ) const { return true; }
 	virtual int				GetMultiplayerPhysicsMode() { return m_iPhysicsMode; }
 	virtual float			GetMass();

@@ -1031,7 +1031,11 @@ void CBaseCombatCharacter::Weapon_FrameUpdate( void )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( float flDist, const Vector &mins, const Vector &maxs, float flDamage, CUtlVector<int> *hDmgType, float forceScale, bool bDamageAnyNPC )
+#else
 CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( float flDist, const Vector &mins, const Vector &maxs, float flDamage, int iDmgType, float forceScale, bool bDamageAnyNPC )
+#endif
 {
 	// If only a length is given assume we want to trace in our facing direction
 	Vector forward;
@@ -1052,7 +1056,11 @@ CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( float flDist, const Vec
 
 	vStart.z += flVerticalOffset;
 	Vector vEnd = vStart + (forward * flDist );
+#ifdef OFFSHORE_DLL
+	return CheckTraceHullAttack(vStart, vEnd, mins, maxs, flDamage, hDmgType, forceScale, bDamageAnyNPC);
+#else
 	return CheckTraceHullAttack( vStart, vEnd, mins, maxs, flDamage, iDmgType, forceScale, bDamageAnyNPC );
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -1152,7 +1160,11 @@ bool CTraceFilterMelee::ShouldHitEntity( IHandleEntity *pHandleEntity, int conte
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( const Vector &vStart, const Vector &vEnd, const Vector &mins, const Vector &maxs, float flDamage, CUtlVector<int> *hDmgType, float flForceScale, bool bDamageAnyNPC )
+#else
 CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( const Vector &vStart, const Vector &vEnd, const Vector &mins, const Vector &maxs, float flDamage, int iDmgType, float flForceScale, bool bDamageAnyNPC )
+#endif
 {
 	// Handy debuging tool to visualize HullAttack trace
 	if ( ai_show_hull_attacks.GetBool() )
@@ -1167,9 +1179,12 @@ CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( const Vector &vStart, c
 	}
 
 #if 1
-
+#ifdef OFFSHORE_DLL
+	CTakeDamageInfo	dmgInfo( this, this, flDamage, hDmgType );
+#else
 	CTakeDamageInfo	dmgInfo( this, this, flDamage, iDmgType );
-	
+#endif
+
 	// COLLISION_GROUP_PROJECTILE does some handy filtering that's very appropriate for this type of attack, as well. (sjb) 7/25/2007
 	CTraceFilterMelee traceFilter( this, COLLISION_GROUP_PROJECTILE, &dmgInfo, flForceScale, bDamageAnyNPC );
 
@@ -1306,10 +1321,18 @@ bool  CBaseCombatCharacter::Event_Gibbed( const CTakeDamageInfo &info )
 Vector CBaseCombatCharacter::CalcDeathForceVector( const CTakeDamageInfo &info )
 {
 	// Already have a damage force in the data, use that.
+#ifdef OFFSHORE_DLL
+	bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageTypes() );
+#else
 	bool bNoPhysicsForceDamage = g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType() );
+#endif
 	if ( info.GetDamageForce() != vec3_origin || bNoPhysicsForceDamage )
 	{
+#ifdef OFFSHORE_DLL
+		if( info.GetDamageTypes()->HasElement(DMG_BLAST) )
+#else
 		if( info.GetDamageType() & DMG_BLAST )
+#endif
 		{
 			// Fudge blast forces a little bit, so that each
 			// victim gets a slightly different trajectory. 
@@ -1342,7 +1365,11 @@ Vector CBaseCombatCharacter::CalcDeathForceVector( const CTakeDamageInfo &info )
 		Vector forceVector;
 		// If the damage is a blast, point the force vector higher than usual, this gives 
 		// the ragdolls a bodacious "really got blowed up" look.
+#ifdef OFFSHORE_DLL
+		if( info.GetDamageTypes()->HasElement(DMG_BLAST) )
+#else
 		if( info.GetDamageType() & DMG_BLAST )
+#endif
 		{
 			// exaggerate the force from explosions a little (37.5%)
 			forceVector = (GetLocalOrigin() + Vector(0, 0, WorldAlignSize().z) ) - pForce->GetLocalOrigin();
@@ -1415,7 +1442,12 @@ bool CBaseCombatCharacter::BecomeRagdollBoogie( CBaseEntity *pKiller, const Vect
 {
 	Assert( CanBecomeRagdoll() );
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+	CTakeDamageInfo info( pKiller, pKiller, 1.0f, &hDamage );
+#else
 	CTakeDamageInfo info( pKiller, pKiller, 1.0f, DMG_GENERIC );
+#endif
 
 	info.SetDamageForce( forceVector );
 
@@ -1425,7 +1457,13 @@ bool CBaseCombatCharacter::BecomeRagdollBoogie( CBaseEntity *pKiller, const Vect
 
 	CRagdollBoogie::Create( pRagdoll, 200, gpGlobals->curtime, duration, flags );
 
+	#ifdef OFFSHORE_DLL
+	CUtlVector<int> hRagdolDamage; hRagdolDamage.AddToTail(DMG_GENERIC); hRagdolDamage.AddToTail(DMG_REMOVENORAGDOLL);
+	CTakeDamageInfo ragdollInfo( pKiller, pKiller, 10000.0, &hRagdolDamage );
+#else
 	CTakeDamageInfo ragdollInfo( pKiller, pKiller, 10000.0, DMG_GENERIC | DMG_REMOVENORAGDOLL );
+#endif
+	
 	ragdollInfo.SetDamagePosition(WorldSpaceCenter());
 	ragdollInfo.SetDamageForce( Vector( 0, 0, 1) );
 	TakeDamage( ragdollInfo );
@@ -1438,7 +1476,12 @@ bool CBaseCombatCharacter::BecomeRagdollBoogie( CBaseEntity *pKiller, const Vect
 //-----------------------------------------------------------------------------
 bool CBaseCombatCharacter::BecomeRagdoll( const CTakeDamageInfo &info, const Vector &forceVector )
 {
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_VEHICLE) && !g_pGameRules->IsMultiplayer() )
+#else
 	if ( (info.GetDamageType() & DMG_VEHICLE) && !g_pGameRules->IsMultiplayer() )
+#endif
+	
 	{
 		CTakeDamageInfo info2 = info;
 		info2.SetDamageForce( forceVector );
@@ -1562,10 +1605,18 @@ void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
 	if ( ShouldGib( info ) == false )
 	{
 		bool bRagdollCreated = false;
+#ifdef OFFSHORE_DLL
+		if ( info.GetDamageTypes()->HasElement(DMG_DISSOLVE) && CanBecomeRagdoll() )
+#else
 		if ( (info.GetDamageType() & DMG_DISSOLVE) && CanBecomeRagdoll() )
+#endif
 		{
 			int nDissolveType = ENTITY_DISSOLVE_NORMAL;
+#ifdef OFFSHORE_DLL
+			if ( info.GetDamageTypes()->HasElement(DMG_SHOCK) )
+#else
 			if ( info.GetDamageType() & DMG_SHOCK )
+#endif
 			{
 				nDissolveType = ENTITY_DISSOLVE_ELECTRICAL;
 			}
@@ -1587,8 +1638,11 @@ void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
 			}
 		}
 #endif
-
+#ifdef OFFSHORE_DLL
+		if ( !bRagdollCreated && ( info.GetDamageTypes()->HasElement(DMG_REMOVENORAGDOLL) ) == 0 )
+#else
 		if ( !bRagdollCreated && ( info.GetDamageType() & DMG_REMOVENORAGDOLL ) == 0 )
+#endif
 		{
 			BecomeRagdoll( info, forceVector );
 		}
@@ -2266,12 +2320,20 @@ void CBaseCombatCharacter::RemoveAllWeapons()
 
 
 // take health
+#ifdef OFFSHORE_DLL
+int CBaseCombatCharacter::TakeHealth( float flHealth, CUtlVector<int> *hDamageType )
+#else
 int CBaseCombatCharacter::TakeHealth (float flHealth, int bitsDamageType)
+#endif
 {
 	if (!m_takedamage)
 		return 0;
 	
+#ifdef OFFSHORE_DLL
+	return BaseClass::TakeHealth( flHealth, hDamageType );
+#else
 	return BaseClass::TakeHealth(flHealth, bitsDamageType);
+#endif
 }
 
 
@@ -2300,7 +2362,11 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 
 	m_iDamageCount++;
 
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_SHOCK) )
+#else
 	if ( info.GetDamageType() & DMG_SHOCK )
+#endif
 	{
 		g_pEffects->Sparks( info.GetDamagePosition(), 2, 2 );
 		UTIL_Smoke( info.GetDamagePosition(), random->RandomInt( 10, 15 ), 10 );
@@ -2342,7 +2408,11 @@ int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
 	default:
 	case LIFE_DEAD:
 		retVal = OnTakeDamage_Dead( info );
+#ifdef OFFSHORE_DLL
+		if ( m_iHealth <= 0 && g_pGameRules->Damage_ShouldGibCorpse( info.GetDamageTypes() ) && ShouldGib( info ) )
+#else
 		if ( m_iHealth <= 0 && g_pGameRules->Damage_ShouldGibCorpse( info.GetDamageType() ) && ShouldGib( info ) )
+#endif
 		{
 			Event_Gibbed( info );
 			retVal = 0;
@@ -3123,7 +3193,12 @@ void CBaseCombatCharacter::ApplyStressDamage( IPhysicsObject *pPhysics, bool bRe
 			return;
 
 		//Msg("Stress! %.2f / %.2f\n", stressOut.exertedStress, stressOut.receivedStress );
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_CRUSH);
+		CTakeDamageInfo dmgInfo( GetWorldEntity(), GetWorldEntity(), vec3_origin, vec3_origin, damage, &hDamageType );
+#else
 		CTakeDamageInfo dmgInfo( GetWorldEntity(), GetWorldEntity(), vec3_origin, vec3_origin, damage, DMG_CRUSH );
+#endif
 		dmgInfo.SetDamageForce( Vector( 0, 0, -stressOut.receivedStress * sv_gravity.GetFloat() * gpGlobals->frametime ) );
 		dmgInfo.SetDamagePosition( GetAbsOrigin() );
 		TakeDamage( dmgInfo );
@@ -3180,7 +3255,13 @@ void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisioneve
 	if ( this == pOther->HasPhysicsAttacker( flOtherAttackerTime ) )
 		return;
 
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType;
+	// This is just for convenience
+	CUtlVector<int> *damageType = &hDamageType;
+#else
 	int damageType = 0;
+#endif
 	float damage = 0;
 
 	damage = CalculatePhysicsImpactDamage( index, pEvent, GetPhysicsImpactDamageTable(), m_impactEnergyScale, false, damageType );
@@ -3200,7 +3281,11 @@ void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisioneve
 		if ( pPassenger != NULL )
 		{
 			// flag as vehicle damage
+#ifdef OFFSHORE_DLL
+			hDamageType.AddToTail(DMG_VEHICLE);
+#else
 			damageType |= DMG_VEHICLE;
+#endif
 			// if hit by vehicle driven by player, add some upward velocity to force
 			float len = damageForce.Length();
 			damageForce.z += len*phys_upimpactforcescale.GetFloat();
@@ -3254,7 +3339,11 @@ void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc, float flRa
 	g_pGameRules->RadiusDamage( info, vecSrc, flRadius, iClassIgnore, pEntityIgnore );
 
 	// Let the world know if this was an explosion.
+#ifdef OFFSHORE_DLL
+	if( info.GetDamageTypes()->HasElement(DMG_BLAST) )
+#else
 	if( info.GetDamageType() & DMG_BLAST )
+#endif
 	{
 		// Even the tiniest explosion gets attention. Don't let the radius
 		// be less than 128 units.

@@ -1449,8 +1449,12 @@ void CItemSoda::CanTouch ( CBaseEntity *pOther )
 	}
 
 	// spoit sound here
-
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+	pOther->TakeHealth( 1, &hDamage );// a bit of health.
+#else
 	pOther->TakeHealth( 1, DMG_GENERIC );// a bit of health.
+#endif
 
 	if ( GetOwnerEntity() )
 	{
@@ -2321,7 +2325,12 @@ void CEnvGunfire::ShootThink()
 
 		if( tr.fraction != 1.0 )
 		{
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_BULLET);
+			DoImpactEffect( tr, &hDamage );
+#else
 			DoImpactEffect( tr, DMG_BULLET );
+#endif
 		}
 
 		vecEnd = tr.endpos;

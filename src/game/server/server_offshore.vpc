@@ -22,6 +22,7 @@ $Configuration
 	}
 }
 
+
 $Project "Server (Offshore)"
 {
 	$Folder	"Source Files"
@@ -32,29 +33,32 @@ $Project "Server (Offshore)"
 
 		$Folder "Template"
 		{
-			$File	"template\player_pickup_controller.cpp"
-			$File	"template\sdk_client.cpp"
-			$File	"template\sdk_eventlog.cpp"
-			$File	"template\sdk_player.h"
-			$File	"template\sdk_player.cpp"
-			$File	"template\sdk_playermove.cpp"
-			$File	"template\test_entity.cpp"
-			$File	"template\weapon_cubemap.cpp"
+			$File	"template/player_pickup_controller.cpp"
+			$File	"template/sdk_client.cpp"
+			$File	"template/sdk_eventlog.cpp"
+			$File	"template/sdk_player.h"
+			$File	"template/sdk_player.cpp"
+			$File	"template/sdk_playermove.cpp"
+			$File	"template/test_entity.cpp"
+			$File	"template/weapon_cubemap.cpp"
 
 			$Folder	"Weapons"
 			{
-				$File	"template\weapons\basebludgeonweapon.cpp"
-				$File	"template\weapons\basebludgeonweapon.h"
-				$File	"template\weapons\basesdkcombatweapon.cpp"
-				$File	"template\weapons\weapon_shotgun.cpp"
-				$File	"template\weapons\weapon_smg.cpp"
-				$File	"template\weapons\weapon_pistol.cpp"
-				$File	"template\weapons\weapon_crowbar.cpp"
+				$File	"template/weapons/basebludgeonweapon.cpp"
+				$File	"template/weapons/basebludgeonweapon.h"
+				$File	"template/weapons/basesdkcombatweapon.cpp"
+				$File	"template/weapons/weapon_shotgun.cpp"
+				$File	"template/weapons/weapon_smg.cpp"
+				$File	"template/weapons/weapon_pistol.cpp"
+				$File	"template/weapons/weapon_crowbar.cpp"
 			}
 		}
 		
 		$Folder	"Offshore"
 		{
+			$File	"of/te_firebullets.cpp"
+			$File	"of/te_firebullets.h"
+			
 			$Folder	"Bots"
 			{
 				$Folder	"Components"
@@ -128,3 +132,4 @@ $Project "Server (Offshore)"
 		}
 	}
 }
+

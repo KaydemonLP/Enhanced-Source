@@ -1474,7 +1474,11 @@ Vector UTIL_RandomBloodVector( void )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void UTIL_ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName )
+#else
 void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName )
+#endif
 {
 	CBaseEntity *pEntity = pTrace->m_pEnt;
 
@@ -1485,7 +1489,11 @@ void UTIL_ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName
 	if ( pTrace->fraction == 1.0 )
 		return;
 
+#ifdef OFFSHORE_DLL
+	pEntity->ImpactTrace( pTrace, hDamageType, pCustomImpactName );
+#else
 	pEntity->ImpactTrace( pTrace, iDamageType, pCustomImpactName );
+#endif
 }
 
 /*

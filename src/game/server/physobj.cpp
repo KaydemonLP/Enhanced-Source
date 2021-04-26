@@ -997,7 +997,12 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 					adjustedDamage = 1;
 				}
 
+#ifdef OFFSHORE_DLL
+				CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_BLAST);
+				CTakeDamageInfo info( this, this, adjustedDamage, &hDamageType );
+#else
 				CTakeDamageInfo info( this, this, adjustedDamage, DMG_BLAST );
+#endif
 				CalculateExplosiveDamageForce( &info, (vecSpot - vecOrigin), vecOrigin );
 	
 				if ( HasSpawnFlags( SF_PHYSEXPLOSION_PUSH_PLAYER ) )
@@ -1641,7 +1646,12 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 			// If it takes damage, destroy it
 			if ( pOther->m_takedamage != DAMAGE_NO && pOther->m_takedamage != DAMAGE_EVENTS_ONLY )
 			{
+#ifdef OFFSHORE_DLL
+				CUtlVector<int> hDamageType; hDamageType.AddToTail( DMG_GENERIC ); hDamageType.AddToTail(DMG_PREVENT_PHYSICS_FORCE );
+				CTakeDamageInfo info( this, this, pOther->GetHealth(), &hDamageType );
+#else
 				CTakeDamageInfo info( this, this, pOther->GetHealth(), DMG_GENERIC | DMG_PREVENT_PHYSICS_FORCE );
+#endif
 				pOther->TakeDamage( info );
 			}
 			else if ( pEvent->pObjects[ otherIndex ]->IsMoveable() )

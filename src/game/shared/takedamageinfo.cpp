@@ -24,14 +24,20 @@ BEGIN_SIMPLE_DATADESC( CTakeDamageInfo )
 	DEFINE_FIELD( m_flDamage, FIELD_FLOAT),
 	DEFINE_FIELD( m_flMaxDamage, FIELD_FLOAT),
 	DEFINE_FIELD( m_flBaseDamage, FIELD_FLOAT ),
+#ifndef OFFSHORE_DLL
 	DEFINE_FIELD( m_bitsDamageType, FIELD_INTEGER),
+#endif
 	DEFINE_FIELD( m_iDamageCustom, FIELD_INTEGER),
 	DEFINE_FIELD( m_iDamageStats, FIELD_INTEGER),
 	DEFINE_FIELD( m_iAmmoType, FIELD_INTEGER),
 	DEFINE_FIELD( m_flRadius, FIELD_FLOAT),
 END_DATADESC()
 
-void CTakeDamageInfo::Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iCustomDamage )
+#ifdef OFFSHORE_DLL
+void CTakeDamageInfo::Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, CUtlVector<int> *hDamageType, int iCustomDamage )
+#else
+void CTakeDamageInfo::Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iKillType )
+#endif
 {
 	m_hInflictor = pInflictor;
 	if ( pAttacker )
@@ -49,7 +55,11 @@ void CTakeDamageInfo::Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBa
 
 	m_flBaseDamage = BASEDAMAGE_NOT_SPECIFIED;
 
-	m_bitsDamageType = bitsDamageType;
+#ifdef OFFSHORE_DLL
+	SetDamageType(hDamageType);
+#else
+	m_bitsDamageType =
+#endif
 	m_iDamageCustom = iCustomDamage;
 
 	m_flMaxDamage = flDamage;
@@ -62,9 +72,52 @@ void CTakeDamageInfo::Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBa
 
 CTakeDamageInfo::CTakeDamageInfo()
 {
-	Init( NULL, NULL, NULL, vec3_origin, vec3_origin, vec3_origin, 0, 0, 0 );
+	Init(NULL, NULL, NULL, vec3_origin, vec3_origin, vec3_origin, 0, 0, 0);
 }
 
+#ifdef OFFSHORE_DLL
+CTakeDamageInfo::CTakeDamageInfo(CTakeDamageInfo const& other) : CTakeDamageInfo()
+{
+	m_vecDamageForce		= other.m_vecDamageForce;
+	m_vecDamagePosition		= other.m_vecDamagePosition;
+	m_vecReportedPosition	= other.m_vecReportedPosition;	
+	m_hInflictor			= other.m_hInflictor;
+	m_hAttacker				= other.m_hAttacker;
+	m_hWeapon				= other.m_hWeapon;
+	m_flDamage				= other.m_flDamage;
+	m_flMaxDamage			= other.m_flMaxDamage;
+	m_flBaseDamage			= other.m_flBaseDamage;			
+ 
+	m_hDamageType			= other.m_hDamageType;			
+
+	m_iDamageCustom			= other.m_iDamageCustom;
+	m_iDamageStats			= other.m_iDamageStats;
+	m_iAmmoType				= other.m_iAmmoType;
+	m_flRadius				= other.m_flRadius;			
+}
+#endif
+
+#ifdef OFFSHORE_DLL
+CTakeDamageInfo::CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, CUtlVector<int> *hDamageType, int iKillType )
+{
+	Set( pInflictor, pAttacker, flDamage, hDamageType, iKillType );
+}
+
+CTakeDamageInfo::CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, float flDamage, CUtlVector<int> *hDamageType, int iKillType )
+{
+	Set( pInflictor, pAttacker, pWeapon, flDamage, hDamageType, iKillType );
+}
+
+CTakeDamageInfo::CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType, Vector *reportedPosition )
+{
+	Set( pInflictor, pAttacker, damageForce, damagePosition, flDamage, hDamageType, iKillType, reportedPosition );
+}
+
+CTakeDamageInfo::CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType, Vector *reportedPosition )
+{
+	Set( pInflictor, pAttacker, pWeapon, damageForce, damagePosition, flDamage, hDamageType, iKillType, reportedPosition );
+}
+#else
 CTakeDamageInfo::CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, int bitsDamageType, int iKillType )
 {
 	Set( pInflictor, pAttacker, flDamage, bitsDamageType, iKillType );
@@ -84,7 +137,35 @@ CTakeDamageInfo::CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacke
 {
 	Set( pInflictor, pAttacker, pWeapon, damageForce, damagePosition, flDamage, bitsDamageType, iKillType, reportedPosition );
 }
+#endif
 
+#ifdef OFFSHORE_DLL
+
+void CTakeDamageInfo::Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, CUtlVector<int> *hDamageType, int iKillType )
+{
+	Init( pInflictor, pAttacker, NULL, vec3_origin, vec3_origin, vec3_origin, flDamage, hDamageType, iKillType );
+}
+
+void CTakeDamageInfo::Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, float flDamage, CUtlVector<int> *hDamageType, int iKillType )
+{
+	Init( pInflictor, pAttacker, pWeapon, vec3_origin, vec3_origin, vec3_origin, flDamage, hDamageType, iKillType );
+}
+
+void CTakeDamageInfo::Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType, Vector *reportedPosition )
+{
+	Set( pInflictor, pAttacker, NULL, damageForce, damagePosition, flDamage, hDamageType, iKillType, reportedPosition );
+}
+
+void CTakeDamageInfo::Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType, Vector *reportedPosition )
+{
+	Vector vecReported = vec3_origin;
+	if ( reportedPosition )
+	{
+		vecReported = *reportedPosition;
+	}
+	Init( pInflictor, pAttacker, pWeapon, damageForce, damagePosition, vecReported, flDamage, hDamageType, iKillType );
+}
+#else
 void CTakeDamageInfo::Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, int bitsDamageType, int iKillType )
 {
 	Init( pInflictor, pAttacker, NULL, vec3_origin, vec3_origin, vec3_origin, flDamage, bitsDamageType, iKillType );
@@ -109,6 +190,7 @@ void CTakeDamageInfo::Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBas
 	}
 	Init( pInflictor, pAttacker, pWeapon, damageForce, damagePosition, vecReported, flDamage, bitsDamageType, iKillType );
 }
+#endif
 
 //-----------------------------------------------------------------------------
 // Squirrel the damage value away as BaseDamage, which will later be used to 
@@ -181,10 +263,18 @@ CMultiDamage::CMultiDamage()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CMultiDamage::Init( CBaseEntity *pTarget, CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType )
+#else
 void CMultiDamage::Init( CBaseEntity *pTarget, CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iKillType )
+#endif
 {
 	m_hTarget = pTarget;
+#ifdef OFFSHORE_DLL
+	BaseClass::Init( pInflictor, pAttacker, pWeapon, damageForce, damagePosition, reportedPosition, flDamage, hDamageType, iKillType );
+#else
 	BaseClass::Init( pInflictor, pAttacker, pWeapon, damageForce, damagePosition, reportedPosition, flDamage, bitsDamageType, iKillType );
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -233,10 +323,18 @@ void AddMultiDamage( const CTakeDamageInfo &info, CBaseEntity *pEntity )
 	if ( pEntity != g_MultiDamage.GetTarget() )
 	{
 		ApplyMultiDamage();
+#ifdef OFFSHORE_DLL
+		g_MultiDamage.Init( pEntity, info.GetInflictor(), info.GetAttacker(), info.GetWeapon(), vec3_origin, vec3_origin, vec3_origin, 0.0, info.GetDamageTypes(), info.GetDamageCustom() );
+#else
 		g_MultiDamage.Init( pEntity, info.GetInflictor(), info.GetAttacker(), info.GetWeapon(), vec3_origin, vec3_origin, vec3_origin, 0.0, info.GetDamageType(), info.GetDamageCustom() );
+#endif
 	}
 
+#ifdef OFFSHORE_DLL
+	g_MultiDamage.AddDamageType( info.GetDamageTypes() );
+#else
 	g_MultiDamage.AddDamageType( info.GetDamageType() );
+#endif
 	g_MultiDamage.SetDamage( g_MultiDamage.GetDamage() + info.GetDamage() );
 	g_MultiDamage.SetDamageForce( g_MultiDamage.GetDamageForce() + info.GetDamageForce() );
 	g_MultiDamage.SetDamagePosition( info.GetDamagePosition() );
@@ -244,8 +342,13 @@ void AddMultiDamage( const CTakeDamageInfo &info, CBaseEntity *pEntity )
 	g_MultiDamage.SetMaxDamage( MAX( g_MultiDamage.GetMaxDamage(), info.GetMaxDamage() ) );
 	g_MultiDamage.SetAmmoType( info.GetAmmoType() );
 
+#ifdef OFFSHORE_DLL
+	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( info.GetDamageTypes() );
+	if ( bHasPhysicsForceDamage && !g_MultiDamage.GetDamageTypes()->HasElement(DMG_GENERIC) )
+#else
 	bool bHasPhysicsForceDamage = !g_pGameRules->Damage_NoPhysicsForce( info.GetDamageType() );
 	if ( bHasPhysicsForceDamage && g_MultiDamage.GetDamageType() != DMG_GENERIC )
+#endif
 	{
 		// If you hit this assert, you've called TakeDamage with a damage type that requires a physics damage
 		// force & position without specifying one or both of them. Decide whether your damage that's causing 
@@ -356,11 +459,19 @@ void CalculateMeleeDamageForce( CTakeDamageInfo *info, const Vector &vecMeleeDir
 //-----------------------------------------------------------------------------
 void GuessDamageForce( CTakeDamageInfo *info, const Vector &vecForceDir, const Vector &vecForceOrigin, float flScale )
 {
+#ifdef OFFSHORE_DLL
+	if ( info->GetDamageTypes()->HasElement(DMG_BULLET) )
+#else
 	if ( info->GetDamageType() & DMG_BULLET )
+#endif
 	{
 		CalculateBulletDamageForce( info, GetAmmoDef()->Index("SMG1"), vecForceDir, vecForceOrigin, flScale );
 	}
+#ifdef OFFSHORE_DLL
+	else if ( info->GetDamageTypes()->HasElement(DMG_BLAST) )
+#else
 	else if ( info->GetDamageType() & DMG_BLAST )
+#endif
 	{
 		CalculateExplosiveDamageForce( info, vecForceDir, vecForceOrigin, flScale );
 	}
@@ -412,7 +523,11 @@ static const char * const s_DamageTypeToStrTable[] =
 };
 #define DAMAGE_TYPE_STR_TABLE_ENTRIES 31 // number of entries in table above
 
+#ifdef OFFSHORE_DLL
+void CTakeDamageInfo::DebugGetDamageTypeString(CUtlVector<int> *damageType, char *outbuf, int outbuflength )
+#else
 void CTakeDamageInfo::DebugGetDamageTypeString(unsigned int damageType, char *outbuf, int outbuflength )
+#endif
 {
 	Assert(outbuflength > 0);
 
@@ -431,7 +546,11 @@ void CTakeDamageInfo::DebugGetDamageTypeString(unsigned int damageType, char *ou
 		 outbuflength > 0 && i < (DAMAGE_TYPE_STR_TABLE_ENTRIES - 1);
 		 ++i )
 	{
+#ifdef OFFSHORE_DLL
+		if ( damageType->HasElement(i) )
+#else
 		if ( damageType & (1 << i) )
+#endif
 		{
 			// this bit was set. Print the corresponding entry from the table
 			// (the index is +1 because entry 1 in the table corresponds to 1 << 0)

@@ -137,8 +137,13 @@ public:
 };
 
 // The weapon parse function
+#ifdef OFFSHORE_DLL
+bool ReadWeaponDataFromFileForSlot( IFileSystem* filesystem, const char *szWeaponName, 
+	WEAPON_FILE_INFO_HANDLE *phandle, const unsigned char *pICEKey = NULL, bool bReParse = false );
+#else
 bool ReadWeaponDataFromFileForSlot( IFileSystem* filesystem, const char *szWeaponName, 
 	WEAPON_FILE_INFO_HANDLE *phandle, const unsigned char *pICEKey = NULL, bool bIsCustom = false );
+#endif
 
 // If weapon info has been loaded for the specified class name, this returns it.
 WEAPON_FILE_INFO_HANDLE LookupWeaponInfoSlot( const char *name );

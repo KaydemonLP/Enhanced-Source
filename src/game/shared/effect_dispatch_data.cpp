@@ -9,6 +9,11 @@
 #include "effect_dispatch_data.h"
 #include "coordsize.h"
 
+#ifdef OFFSHORE_DLL
+#include "dt_utlvector_recv.h"
+#include "dt_utlvector_send.h"
+#endif
+
 #ifdef CLIENT_DLL
 #include "cliententitylist.h"
 #endif
@@ -55,7 +60,11 @@
 		RecvPropInt( RECVINFO( m_iEffectName ) ),
 
 		RecvPropInt( RECVINFO( m_nMaterial ) ),
+#ifdef OFFSHORE_DLL
+		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hDamageType ), 32, RecvPropInt(NULL, 0, sizeof(int)) ),
+#else
 		RecvPropInt( RECVINFO( m_nDamageType ) ),
+#endif
 		RecvPropInt( RECVINFO( m_nHitBox ) ),
 
 		RecvPropInt( "entindex", 0, SIZEOF_IGNORE, 0, RecvProxy_EntIndex ),
@@ -105,7 +114,11 @@
 		SendPropInt( SENDINFO_NOCHECK( m_iEffectName ), MAX_EFFECT_DISPATCH_STRING_BITS, SPROP_UNSIGNED ),
 
 		SendPropInt( SENDINFO_NOCHECK( m_nMaterial ), MAX_MODEL_INDEX_BITS, SPROP_UNSIGNED ),
+#ifdef OFFSHORE_DLL
+		SendPropUtlVector( SENDINFO_UTLVECTOR( m_hDamageType ), 32, SendPropInt( NULL, 0, sizeof(int) ) ),
+#else
 		SendPropInt( SENDINFO_NOCHECK( m_nDamageType ), 32, SPROP_UNSIGNED ),
+#endif
 		SendPropInt( SENDINFO_NOCHECK( m_nHitBox ), 11, SPROP_UNSIGNED ),
 
 		SendPropInt( SENDINFO_NAME( m_nEntIndex, entindex ), MAX_EDICT_BITS, SPROP_UNSIGNED ),

@@ -307,7 +307,11 @@ public:
 	//---------------------------------
 	void		TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 	int			OnTakeDamage_Alive( const CTakeDamageInfo &info );
+#ifdef OFFSHORE_DLL
+	int			TakeHealth( float flHealth, CUtlVector<int> *hDamageType );
+#else
 	int			TakeHealth( float flHealth, int bitsDamageType );
+#endif
 	void		Event_Killed( const CTakeDamageInfo &info );
 	bool		CreateVPhysics();
 

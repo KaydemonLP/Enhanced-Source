@@ -363,8 +363,11 @@ public:
 
 	const char				*GetTracerType( void );
 	void					MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
+#ifdef OFFSHORE_DLL
+	void					DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType );
+#else
 	void					DoImpactEffect( trace_t &tr, int nDamageType );
-
+#endif
 #if !defined( NO_ENTITY_PREDICTION )
 	void					AddToPlayerSimulationList( CBaseEntity *other );
 	void					RemoveFromPlayerSimulationList( CBaseEntity *other );
@@ -382,11 +385,19 @@ public:
 
 	virtual void			PreThink( void );
 	virtual void			PostThink( void );
+#ifdef OFFSHORE_DLL
+	virtual int				TakeHealth( float flHealth, CUtlVector<int> *hDamageType );
+#else
 	virtual int				TakeHealth( float flHealth, int bitsDamageType );
+#endif
 	virtual void			TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 	bool					ShouldTakeDamageInCommentaryMode( const CTakeDamageInfo &inputInfo );
 	virtual int				OnTakeDamage( const CTakeDamageInfo &info );
+#ifdef OFFSHORE_DLL
+	virtual void			DamageEffect( float flDamage, CUtlVector<int> *hDamageType );
+#else
 	virtual void			DamageEffect(float flDamage, int fDamageType);
+#endif
 
 	virtual void			OnDamagedByExplosion( const CTakeDamageInfo &info );
 
@@ -1001,8 +1012,14 @@ protected:
 	Vector					m_DmgOrigin;
 	float					m_DmgTake;
 	float					m_DmgSave;
+
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>			m_hDamageType;
+	CUtlVector<int>			m_hHUDDamage;
+#else
 	int						m_bitsDamageType;	// what types of damage has player taken
 	int						m_bitsHUDDamage;	// Damage bits for the current fame. These get sent to the hud via gmsgDamage
+#endif
 
 	CNetworkVar( float, m_flDeathTime );		// the time at which the player died  (used in PlayerDeathThink())
 	float					m_flDeathAnimTime;	// the time at which the player finished their death anim (used in PlayerDeathThink() and ShouldTransmit())
@@ -1034,8 +1051,11 @@ protected:
 	virtual int SpawnArmorValue( void ) const { return 0; }
 
 	float					m_fNextSuicideTime; // the time after which the player can next use the suicide command
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>			m_hSuicideCustomKillFlags;
+#else
 	int						m_iSuicideCustomKillFlags;
-
+#endif
 	// Replay mode	
 	float					m_fDelay;			// replay delay in seconds
 	float					m_fReplayEnd;		// time to stop replay mode

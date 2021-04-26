@@ -101,7 +101,11 @@ void CWaterBullet::Touch( CBaseEntity *pOther )
 
 	trace_t	tr;
 	UTIL_TraceLine( vecStart, vecEnd, MASK_SHOT, NULL, &tr );
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_BULLET);
+	UTIL_ImpactTrace( &tr, &hDamage );
+#else
 	UTIL_ImpactTrace( &tr, DMG_BULLET );
-
+#endif
 	UTIL_Remove( this );
 }

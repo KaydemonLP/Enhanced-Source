@@ -13,6 +13,7 @@
 
 
 #include "networkvar.h" // todo: change this when DECLARE_CLASS is moved into a better location.
+#include "utlvector.h"
 
 // Used to initialize m_flBaseDamage to something that we know pretty much for sure
 // hasn't been modified by a user. 
@@ -27,11 +28,21 @@ public:
 	DECLARE_CLASS_NOBASE( CTakeDamageInfo );
 
 					CTakeDamageInfo();
+#ifdef OFFSHORE_DLL
+					// Since the default compiler fucks the CUtlVector up, we gotta do it by hand
+					// If it was possible to fix the const constructor for CUtlVector i'd do that but alas
+					// yeah i know its stupid - Kay
+					CTakeDamageInfo( CTakeDamageInfo const& other );
+					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0 );
+					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0 );
+					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
+					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
+#else
 					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, int bitsDamageType, int iKillType = 0 );
 					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, float flDamage, int bitsDamageType, int iKillType = 0 );
 					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, const Vector &damageForce, const Vector &damagePosition, float flDamage, int bitsDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
 					CTakeDamageInfo( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, int bitsDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
-	
+#endif
 
 	// Inflictor is the weapon or rocket (or player) that is dealing the damage.
 	CBaseEntity*	GetInflictor() const;
@@ -68,9 +79,20 @@ public:
 	Vector			GetReportedPosition() const;
 	void			SetReportedPosition( const Vector &reportedPosition );
 
+#ifdef OFFSHORE_DLL
+	bool			HasDamageType( int iDamageType ) const;
+	CUtlVector<int>	*GetDamageTypes() const;
+#else
 	int				GetDamageType() const;
+#endif
 	void			SetDamageType( int bitsDamageType );
+#ifdef OFFSHORE_DLL
+	void			SetDamageType( CUtlVector<int> *hDamageType );
+#endif
 	void			AddDamageType( int bitsDamageType );
+#ifdef OFFSHORE_DLL
+	void			AddDamageType( CUtlVector<int> *hDamageType );
+#endif
 	int				GetDamageCustom( void ) const;
 	void			SetDamageCustom( int iDamageCustom );
 	int				GetDamageStats( void ) const;
@@ -83,25 +105,37 @@ public:
 	float			GetRadius() const;
 	void			SetRadius( float fRadius );
 
+#ifdef OFFSHORE_DLL
+	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0 );
+	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0 );
+	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
+	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
+#else
 	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, int bitsDamageType, int iKillType = 0 );
 	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, float flDamage, int bitsDamageType, int iKillType = 0 );
 	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, const Vector &damageForce, const Vector &damagePosition, float flDamage, int bitsDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
 	void			Set( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, int bitsDamageType, int iKillType = 0, Vector *reportedPosition = NULL );
-
+#endif
 	void			AdjustPlayerDamageInflictedForSkillLevel();
 	void			AdjustPlayerDamageTakenForSkillLevel();
 
 	// Given a damage type (composed of the #defines above), fill out a string with the appropriate text.
 	// For designer debug output.
+#ifdef OFFSHORE_DLL
+	static void		DebugGetDamageTypeString(CUtlVector<int> *DamageType, char *outbuf, int outbuflength);
+#else
 	static void		DebugGetDamageTypeString(unsigned int DamageType, char *outbuf, int outbuflength );
-
+#endif
 
 //private:
 	void			CopyDamageToBaseDamage();
 
 protected:
+#ifdef OFFSHORE_DLL
+	void			Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType );
+#else
 	void			Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iKillType );
-
+#endif
 	Vector			m_vecDamageForce;
 	Vector			m_vecDamagePosition;
 	Vector			m_vecReportedPosition;	// Position players are told damage is coming from
@@ -111,7 +145,11 @@ protected:
 	float			m_flDamage;
 	float			m_flMaxDamage;
 	float			m_flBaseDamage;			// The damage amount before skill leve adjustments are made. Used to get uniform damage forces.
+#ifdef OFFSHORE_DLL
+	CUtlVector<int>	m_hDamageType;			// Offshore uses CUtlVector in order to have more than 32 possible damage types
+#else
 	int				m_bitsDamageType;
+#endif
 	int				m_iDamageCustom;
 	int				m_iDamageStats;
 	int				m_iAmmoType;			// AmmoType of the weapon used to cause this damage, if any
@@ -133,8 +171,11 @@ public:
 	CBaseEntity		*GetTarget() const;
 	void			SetTarget( CBaseEntity *pTarget );
 
+#ifdef OFFSHORE_DLL
+	void			Init( CBaseEntity *pTarget, CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, CUtlVector<int> *hDamageType, int iKillType );
+#else
 	void			Init( CBaseEntity *pTarget, CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iKillType );
-
+#endif
 protected:
 	EHANDLE			m_hTarget;
 
@@ -282,21 +323,66 @@ inline void CTakeDamageInfo::SetReportedPosition( const Vector &reportedPosition
 {
 	m_vecReportedPosition = reportedPosition;
 }
-
+#ifdef OFFSHORE_DLL
+inline bool CTakeDamageInfo::HasDamageType( int iDamageType ) const
+{
+	return m_hDamageType.HasElement(iDamageType);
+}
+inline CUtlVector<int> *CTakeDamageInfo::GetDamageTypes() const
+{
+	return const_cast<CUtlVector<int> *>(&m_hDamageType);
+}
+#else
 inline int CTakeDamageInfo::GetDamageType() const
 {
 	return m_bitsDamageType;
 }
+#endif
+
+#ifdef OFFSHORE_DLL
+inline void CTakeDamageInfo::SetDamageType( CUtlVector<int> *hDamageType )
+{
+	m_hDamageType.Purge();
+
+	if( hDamageType )
+	{
+		FOR_EACH_VEC(*hDamageType, iType)
+		{
+			m_hDamageType.AddToTail(hDamageType->Element(iType));
+		}
+	}
+}
+#endif
 
 
 inline void CTakeDamageInfo::SetDamageType( int bitsDamageType )
 {
+#ifdef OFFSHORE_DLL
+	Assert(!"OFFSHORE DOES NOT USE BITS FOR SET DAMAGE TYPE, CHANGE WHICHEVER FUNCTION IS USING THIS");
+#else
 	m_bitsDamageType = bitsDamageType;
+#endif
+
 }
+
+#ifdef OFFSHORE_DLL
+inline void	CTakeDamageInfo::AddDamageType( CUtlVector<int> *hDamageType )
+{
+	FOR_EACH_VEC(*hDamageType, iType)
+	{
+		m_hDamageType.AddToTail(hDamageType->Element(iType));
+	}
+}
+#endif
 
 inline void	CTakeDamageInfo::AddDamageType( int bitsDamageType )
 {
+#ifdef OFFSHORE_DLL
+	m_hDamageType.AddToTail(bitsDamageType);
+#else
 	m_bitsDamageType |= bitsDamageType;
+#endif
+	
 }
 
 inline int CTakeDamageInfo::GetDamageCustom() const

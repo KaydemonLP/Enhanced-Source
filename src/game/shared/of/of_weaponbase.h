@@ -16,7 +16,12 @@
 #endif
 
 class CBasePlayer;
+#ifdef GAME_DLL
 class CSDKPlayer;
+#else
+class C_SDKPlayer;
+#define CSDKPlayer C_SDKPlayer
+#endif
 class CBaseCombatCharacter;
 
 class CBaseSDKCombatWeapon : public CBaseCombatWeapon
@@ -39,8 +44,12 @@ public:
 	CBaseSDKCombatWeapon();
 	~CBaseSDKCombatWeapon();
 
+	virtual bool IsPredicted( void ) const { return true; }
+
+	virtual void Precache( void );
+
 	CBasePlayer* GetPlayerOwner() const;
-	//CSDKPlayer*	 GetSDKPlayerOwner() const;
+	CSDKPlayer*	 GetSDKPlayerOwner() const;
 
 	virtual bool	WeaponShouldBeLowered( void );
 
@@ -51,14 +60,33 @@ public:
 	virtual void	DryFire( void );
 	virtual bool	Holster( CBaseCombatWeapon *pSwitchingTo );
 	virtual void	WeaponIdle( void );
-	virtual void	ItemPostFrame();
+	virtual void	CheckReload( void );
+	virtual void	ItemPostFrame( void );
+
+	virtual bool	Reload( void );
+	virtual void	FinishReload( void );
 
 	virtual void	PrimaryAttack( void );						// do "+ATTACK"
 	//virtual void	SecondaryAttack( void ) { return; }			// do "+ATTACK2"
 
-	virtual void	AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles );
-	virtual	float	CalcViewmodelBob( void );
+	virtual bool	HasSecondaryAmmo( void );
+	virtual bool	HasPrimaryAmmo( void );
 
+	virtual int		GetReserveAmmo( void );
+
+	virtual void	RemoveFromClip1( int iAmount );
+	virtual void	RemoveFromClip2( int iAmount );
+
+	virtual void	RemoveFromReserveAmmo( int iAmount );
+
+	virtual int		GetMaxReserveAmmo( void );
+
+	virtual float	GetDamage( void );
+	virtual float	GetDrawTime( void );
+	virtual float	GetFireRate( void );
+	virtual float	GetReloadStartTime( void );
+	virtual float	GetReloadTime( void );
+	virtual bool	ReloadsSingly( void );
 	virtual Vector	GetBulletSpread( WeaponProficiency_t proficiency );
 	virtual float	GetSpreadBias( WeaponProficiency_t proficiency );
 
@@ -69,8 +97,6 @@ public:
 	virtual void	ItemHolsterFrame( void );
 	void			SetTouchPickup( bool bForcePickup ) { m_bForcePickup = bForcePickup; }
 	//void			WeaponAccuracyPenalty( float flPenAccuracy ){ flPenAccuracy = m_flPenAccuracy; }
-	int				m_iPrimaryAttacks;		// # of primary attacks performed with this weapon
-	int				m_iSecondaryAttacks;	// # of secondary attacks performed with this weapon
 
 	CSDKWeaponInfo const	&GetSDKWpnData() const;
 	virtual void FireBullets( const FireBulletsInfo_t &info );
@@ -79,15 +105,14 @@ public:
 
 	virtual void			OnPickedUp( CBaseCombatCharacter *pNewOwner );
 
-	float	m_flPrevAnimTime;
-	float  m_flNextResetCheckTime;
-
-	bool	m_bDelayFire;			// This variable is used to delay the time between subsequent button pressing.
-	float	m_flAccuracy;
-	float	m_flDecreaseShotsFired;
-
+#ifdef CLIENT_DLL
+	virtual void			PostDataUpdate( DataUpdateType_t updateType );
+#endif
 
 	IPhysicsConstraint		*GetConstraint() { return m_pConstraint; }
+
+public:
+	CNetworkVar( int, m_iReserveAmmo );
 
 private:
 	WEAPON_FILE_INFO_HANDLE	m_hWeaponFileInfo;
@@ -99,7 +124,7 @@ protected:
 	bool			m_bLowered;			// Whether the viewmodel is raised or lowered
 	float			m_flRaiseTime;		// If lowered, the time we should raise the viewmodel
 	float			m_flHolsterTime;	// When the weapon was holstered
-
-
 	bool			m_bForcePickup;
+
+	CNetworkVar( int, m_iReloadStage );
 };

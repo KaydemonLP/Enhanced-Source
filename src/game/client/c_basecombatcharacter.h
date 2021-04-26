@@ -96,7 +96,11 @@ public:
 private:
 	bool ComputeLOS( const Vector &vecEyePosition, const Vector &vecTarget ) const;
 
+#ifdef OFFSHORE_DLL
+protected: // The SERVER side of this is protected, why was this private? - Kay
+#else
 private:
+#endif
 	CNetworkArray( int, m_iAmmo, MAX_AMMO_TYPES );
 	CHandle<C_BaseCombatWeapon>		m_hMyWeapons[MAX_WEAPONS];
 	CHandle< C_BaseCombatWeapon > m_hActiveWeapon;

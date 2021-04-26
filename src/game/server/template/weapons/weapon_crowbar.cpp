@@ -195,9 +195,13 @@ void CWeaponCrowbar::HandleAnimEventMeleeHit( animevent_t *pEvent, CBaseCombatCh
 
 	Vector vecEnd;
 	VectorMA( pOperator->Weapon_ShootPosition(), 50, vecDirection, vecEnd );
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_CLUB);
 	CBaseEntity *pHurt = pOperator->CheckTraceHullAttack( pOperator->Weapon_ShootPosition(), vecEnd, 
+		Vector(-16,-16,-16), Vector(36,36,36), sk_npc_dmg_crowbar.GetFloat(), &hDamageType, 0.75 );
+#else
 		Vector(-16,-16,-16), Vector(36,36,36), sk_npc_dmg_crowbar.GetFloat(), DMG_CLUB, 0.75 );
-	
+#endif
 	// did I hit someone?
 	if ( pHurt )
 	{

@@ -327,7 +327,9 @@ BEGIN_DATADESC( CBasePlayer )
 	DEFINE_FIELD( m_nPoisonDmg, FIELD_INTEGER ),
 	DEFINE_FIELD( m_nPoisonRestored, FIELD_INTEGER ),
 
+#ifndef OFFSHORE_DLL
 	DEFINE_FIELD( m_bitsHUDDamage, FIELD_INTEGER ),
+#endif
 	DEFINE_FIELD( m_fInitHUD, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_flDeathTime, FIELD_TIME ),
 	DEFINE_FIELD( m_flDeathAnimTime, FIELD_TIME ),
@@ -369,8 +371,9 @@ BEGIN_DATADESC( CBasePlayer )
 
 	DEFINE_FIELD( m_flFlashTime, FIELD_TIME ),
 	DEFINE_FIELD( m_nDrownDmgRate, FIELD_INTEGER ),
+#ifndef OFFSHORE_DLL
 	DEFINE_FIELD( m_iSuicideCustomKillFlags, FIELD_INTEGER ),
-
+#endif
 	// NOT SAVED
 	//DEFINE_FIELD( m_vForcedOrigin, FIELD_VECTOR ),
 	//DEFINE_FIELD( m_bForceOrigin, FIELD_BOOLEAN ),
@@ -385,7 +388,9 @@ BEGIN_DATADESC( CBasePlayer )
 	// m_vecVehicleViewAngles
 	// m_nVehicleViewSavedFrame
 
+#ifndef OFFSHORE_DLL
 	DEFINE_FIELD( m_bitsDamageType, FIELD_INTEGER ),
+#endif
 	DEFINE_AUTO_ARRAY( m_rgbTimeBasedDamage, FIELD_CHARACTER ),
 	DEFINE_FIELD( m_fLastPlayerTalkTime, FIELD_FLOAT ),
 	DEFINE_FIELD( m_hLastWeapon, FIELD_EHANDLE ),
@@ -594,8 +599,9 @@ CBasePlayer::CBasePlayer( )
 
 	m_iHealth = 0;
 	Weapon_SetLast( NULL );
+#ifndef OFFSHORE_DLL
 	m_bitsDamageType = 0;
-
+#endif
 	m_bForceOrigin = false;
 	m_hVehicle = NULL;
 	m_pCurrentCommand = NULL;
@@ -623,7 +629,9 @@ CBasePlayer::CBasePlayer( )
 	m_chTextureType = 0;
 	m_chPreviousTextureType = 0;
 
+#ifndef OFFSHORE_DLL
 	m_iSuicideCustomKillFlags = 0;
+#endif
 	m_fDelay = 0.0f;
 	m_fReplayEnd = -1;
 	m_iReplayEntity = 0;
@@ -868,7 +876,11 @@ void CBasePlayer::DeathSound( const CTakeDamageInfo &info )
 	// temporarily using pain sounds for death sounds
 
 	// Did we die from falling?
+#ifdef OFFSHORE_DLL
+	if ( m_hDamageType.HasElement( DMG_FALL ) )
+#else
 	if ( m_bitsDamageType & DMG_FALL )
+#endif
 	{
 		// They died in the fall. Play a splat sound.
 		EmitSound( "Player.FallGib" );
@@ -887,22 +899,37 @@ void CBasePlayer::DeathSound( const CTakeDamageInfo &info )
 
 // override takehealth
 // bitsDamageType indicates type of damage healed. 
-
+#ifdef OFFSHORE_DLL
+int CBasePlayer::TakeHealth( float flHealth, CUtlVector<int> *hDamageType )
+#else
 int CBasePlayer::TakeHealth( float flHealth, int bitsDamageType )
+#endif
 {
 	// clear out any damage types we healed.
 	// UNDONE: generic health should not heal any
 	// UNDONE: time-based damage
-	if (m_takedamage)
+	if( m_takedamage )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hTimeBased;
+		g_pGameRules->Damage_GetTimeBased(&hTimeBased);
+		FOR_EACH_VEC(hTimeBased,i)
+			m_hDamageType.FindAndRemove(hTimeBased[i]);
+#else
 		int bitsDmgTimeBased = g_pGameRules->Damage_GetTimeBased();
 		m_bitsDamageType &= ~( bitsDamageType & ~bitsDmgTimeBased );
+#endif
 	}
 
 	// I disabled reporting history into the dbghist because it was super spammy.
 	// But, if you need to reenable it, the code is below in the "else" clause.
 #if 1 // #ifdef DISABLE_DEBUG_HISTORY
-	return BaseClass::TakeHealth (flHealth, bitsDamageType);
+
+#ifdef OFFSHORE_DLL
+	return BaseClass::TakeHealth( flHealth, hDamageType );
+#else
+	return BaseClass::TakeHealth( flHealth, bitsDamageType );
+#endif
 #else
 	const int healingTaken = BaseClass::TakeHealth(flHealth,bitsDamageType);
 	char buf[256];
@@ -998,7 +1025,11 @@ void CBasePlayer::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &v
 #endif
 		{
 			SpawnBlood(ptr->endpos, vecDir, BloodColor(), info.GetDamage());// a little surface blood.
+#ifdef OFFSHORE_DLL
+			TraceBleed( info.GetDamage(), vecDir, ptr, info.GetDamageTypes() );
+#else
 			TraceBleed( info.GetDamage(), vecDir, ptr, info.GetDamageType() );
+#endif
 		}
 
 		AddMultiDamage( info, this );
@@ -1010,26 +1041,46 @@ void CBasePlayer::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &v
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CBasePlayer::DamageEffect( float flDamage, CUtlVector<int> *hDamageType )
+#else
 void CBasePlayer::DamageEffect(float flDamage, int fDamageType)
+#endif
 {
+#ifdef OFFSHORE_DLL
+	if( hDamageType->HasElement(DMG_CRUSH) )
+#else
 	if (fDamageType & DMG_CRUSH)
+#endif
 	{
 		//Red damage indicator
 		color32 red = {128,0,0,128};
 		UTIL_ScreenFade( this, red, 1.0f, 0.1f, FFADE_IN );
 	}
+#ifdef OFFSHORE_DLL
+	else if (hDamageType->HasElement(DMG_DROWN))
+#else
 	else if (fDamageType & DMG_DROWN)
+#endif
 	{
 		//Red damage indicator
 		color32 blue = {0,0,128,128};
 		UTIL_ScreenFade( this, blue, 1.0f, 0.1f, FFADE_IN );
 	}
+#ifdef OFFSHORE_DLL
+	else if (hDamageType->HasElement(DMG_SLASH))
+#else
 	else if (fDamageType & DMG_SLASH)
+#endif
 	{
 		// If slash damage shoot some blood
 		SpawnBlood(EyePosition(), g_vecAttackDir, BloodColor(), flDamage);
 	}
+#ifdef OFFSHORE_DLL
+	else if (hDamageType->HasElement(DMG_PLASMA))
+#else
 	else if (fDamageType & DMG_PLASMA)
+#endif
 	{
 		// Blue screen fade
 		color32 blue = {0,0,255,100};
@@ -1041,12 +1092,20 @@ void CBasePlayer::DamageEffect(float flDamage, int fDamageType)
 		// Burn sound 
 		EmitSound( "Player.PlasmaDamage" );
 	}
+#ifdef OFFSHORE_DLL
+	else if (hDamageType->HasElement(DMG_SONIC))
+#else
 	else if (fDamageType & DMG_SONIC)
+#endif
 	{
 		// Sonic damage sound 
 		EmitSound( "Player.SonicDamage" );
 	}
-	else if ( fDamageType & DMG_BULLET )
+#ifdef OFFSHORE_DLL
+	else if (hDamageType->HasElement(DMG_BULLET))
+#else
+	else if (fDamageType & DMG_BULLET)
+#endif
 	{
 		EmitSound( "Flesh.BulletImpact" );
 	}
@@ -1084,6 +1143,20 @@ bool CBasePlayer::ShouldTakeDamageInCommentaryMode( const CTakeDamageInfo &input
 		return true;
 #endif
 
+#ifdef OFFSHORE_DLL
+	// In commentary, ignore all damage except for falling and leeches
+	if ( !(inputInfo.GetDamageTypes()->HasElement(DMG_BURN) 
+		|| inputInfo.GetDamageTypes()->HasElement(DMG_PLASMA) 
+		|| inputInfo.GetDamageTypes()->HasElement(DMG_FALL)
+		|| inputInfo.GetDamageTypes()->HasElement(DMG_CRUSH)) && !inputInfo.GetDamageTypes()->HasElement(DMG_GENERIC))
+		return false;
+
+	// We let DMG_CRUSH pass the check above so that we can check here for stress damage. Deny the CRUSH damage if there is no attacker,
+	// or if the attacker isn't a BSP model. Therefore, we're allowing any CRUSH damage done by a BSP model.
+	if ( inputInfo.GetDamageTypes()->HasElement(DMG_CRUSH) && ( inputInfo.GetAttacker() == NULL || !inputInfo.GetAttacker()->IsBSPModel() ) )
+		return false;
+
+#else
 	// In commentary, ignore all damage except for falling and leeches
 	if ( !(inputInfo.GetDamageType() & (DMG_BURN | DMG_PLASMA | DMG_FALL | DMG_CRUSH)) && inputInfo.GetDamageType() != DMG_GENERIC )
 		return false;
@@ -1092,14 +1165,19 @@ bool CBasePlayer::ShouldTakeDamageInCommentaryMode( const CTakeDamageInfo &input
 	// or if the attacker isn't a BSP model. Therefore, we're allowing any CRUSH damage done by a BSP model.
 	if ( (inputInfo.GetDamageType() & DMG_CRUSH) && ( inputInfo.GetAttacker() == NULL || !inputInfo.GetAttacker()->IsBSPModel() ) )
 		return false;
-
+#endif
 	return true;
 }
 
 int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 {
 	// have suit diagnose the problem - ie: report damage type
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage;
+	hDamage = *inputInfo.GetDamageTypes();
+#else
 	int bitsDamage = inputInfo.GetDamageType();
+#endif
 	int ffound = true;
 	int fmajor;
 	int fcritical;
@@ -1152,7 +1230,11 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		flRatio = ARMOR_RATIO;
 	}
 
+#ifdef OFFSHORE_DLL
+	if ( info.GetDamageTypes()->HasElement(DMG_BLAST) && g_pGameRules->IsMultiplayer() )
+#else
 	if ( ( info.GetDamageType() & DMG_BLAST ) && g_pGameRules->IsMultiplayer() )
+#endif
 	{
 		// blasts damage armor more.
 		flBonus *= 2;
@@ -1176,7 +1258,11 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 #endif
 	{
 		char dmgtype[64];
+#ifdef OFFSHORE_DLL
+		CTakeDamageInfo::DebugGetDamageTypeString( info.GetDamageTypes(), dmgtype, 512 );
+#else
 		CTakeDamageInfo::DebugGetDamageTypeString( info.GetDamageType(), dmgtype, 512 );
+#endif
 		char outputString[256];
 		Q_snprintf( outputString, 256, "%f: Player %s at [%0.2f %0.2f %0.2f] took %f damage from %s, type %s\n", gpGlobals->curtime, GetDebugName(),
 			GetAbsOrigin().x, GetAbsOrigin().y, GetAbsOrigin().z, info.GetDamage(), info.GetInflictor()->GetDebugName(), dmgtype );
@@ -1197,7 +1283,16 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	m_lastDamageAmount = info.GetDamage();
 
 	// Armor. 
-	if (m_ArmorValue && !(info.GetDamageType() & (DMG_FALL | DMG_DROWN | DMG_POISON | DMG_RADIATION)) )// armor doesn't protect against fall or drown damage!
+	if (m_ArmorValue && 
+#ifdef OFFSHORE_DLL
+		!(
+		info.GetDamageTypes()->HasElement(DMG_FALL)
+		|| info.GetDamageTypes()->HasElement(DMG_DROWN)
+		|| info.GetDamageTypes()->HasElement(DMG_POISON)
+		|| info.GetDamageTypes()->HasElement(DMG_RADIATION) ))// armor doesn't protect against fall or drown damage!
+#else
+		!(info.GetDamageType() & (DMG_FALL | DMG_DROWN | DMG_POISON | DMG_RADIATION)) )// armor doesn't protect against fall or drown damage!
+#endif
 	{
 		float flNew = info.GetDamage() * flRatio;
 
@@ -1256,18 +1351,27 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	// Reset damage time countdown for each type of time based damage player just sustained
 	for (int i = 0; i < CDMG_TIMEBASED; i++)
 	{
+#ifdef OFFSHORE_DLL
 		// Make sure the damage type is really time-based.
 		// This is kind of hacky but necessary until we setup DamageType as an enum.
+		int iDamage = DMG_PARALYZE + i;		// Just assume these are all time based, otherwise use 
+											// CUtlVector<int> hDamage; hDamage.AddToTail(iDamage); g_pGameRules->Damage_IsTimeBased( hDamage ); - Kay
+		if ( ( info.GetDamageTypes()->HasElement(iDamage) ) )//&& g_pGameRules->Damage_IsTimeBased( iDamage ) )
+#else
 		int iDamage = ( DMG_PARALYZE << i );
 		if ( ( info.GetDamageType() & iDamage ) && g_pGameRules->Damage_IsTimeBased( iDamage ) )
+#endif
 		{
 			m_rgbTimeBasedDamage[i] = 0;
 		}
 	}
 
 	// Display any effect associate with this damage type
+#ifdef OFFSHORE_DLL
+	DamageEffect(info.GetDamage(),&hDamage);
+#else
 	DamageEffect(info.GetDamage(),bitsDamage);
-
+#endif
 	// how bad is it, doc?
 	ftrivial = (m_iHealth > 75 || m_lastDamageAmount < 5);
 	fmajor = (m_lastDamageAmount > 25);
@@ -1284,65 +1388,123 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		// DMG_FREEZE
 		// DMG_BLAST
 		// DMG_SHOCK
-
+#ifdef OFFSHORE_DLL
+	FOR_EACH_VEC(hDamage, i)
+	{
+		if( !m_hDamageType.HasElement(hDamage[i]) )
+			m_hDamageType.AddToTail(hDamage[i]);
+	}
+	m_hHUDDamage.Purge();  // make sure the damage bits get resent
+#else
 	m_bitsDamageType |= bitsDamage; // Save this so we can report it to the client
 	m_bitsHUDDamage = -1;  // make sure the damage bits get resent
+#endif
 
+#ifdef OFFSHORE_DLL
+	while( fTookDamage && (!ftrivial || g_pGameRules->Damage_IsTimeBased( &hDamage ) ) && ffound && hDamage.Count() )
+#else
 	while (fTookDamage && (!ftrivial || g_pGameRules->Damage_IsTimeBased( bitsDamage ) ) && ffound && bitsDamage)
+#endif
 	{
 		ffound = false;
-
+#ifdef OFFSHORE_DLL
+		if ( hDamage.HasElement(DMG_CLUB) )
+#else
 		if (bitsDamage & DMG_CLUB)
+#endif
 		{
 			if (fmajor)
 				SetSuitUpdate("!HEV_DMG4", false, SUIT_NEXT_IN_30SEC);	// minor fracture
+#ifdef OFFSHORE_DLL
+			hDamage.HasElement(DMG_CLUB);
+#else
 			bitsDamage &= ~DMG_CLUB;
+#endif
 			ffound = true;
 		}
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_FALL) || hDamage.HasElement(DMG_CRUSH))
+#else
 		if (bitsDamage & (DMG_FALL | DMG_CRUSH))
+#endif
 		{
 			if (fmajor)
 				SetSuitUpdate("!HEV_DMG5", false, SUIT_NEXT_IN_30SEC);	// major fracture
 			else
 				SetSuitUpdate("!HEV_DMG4", false, SUIT_NEXT_IN_30SEC);	// minor fracture
 	
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_FALL);
+			hDamage.FindAndRemove(DMG_CRUSH);
+#else
 			bitsDamage &= ~(DMG_FALL | DMG_CRUSH);
+#endif
 			ffound = true;
 		}
 		
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_BULLET))
+#else
 		if (bitsDamage & DMG_BULLET)
+#endif
 		{
 			if (m_lastDamageAmount > 5)
 				SetSuitUpdate("!HEV_DMG6", false, SUIT_NEXT_IN_30SEC);	// blood loss detected
 			//else
 			//	SetSuitUpdate("!HEV_DMG0", false, SUIT_NEXT_IN_30SEC);	// minor laceration
-			
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_BULLET);
+#else
 			bitsDamage &= ~DMG_BULLET;
+#endif
 			ffound = true;
 		}
 
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_SLASH))
+#else
 		if (bitsDamage & DMG_SLASH)
+#endif
 		{
 			if (fmajor)
 				SetSuitUpdate("!HEV_DMG1", false, SUIT_NEXT_IN_30SEC);	// major laceration
 			else
 				SetSuitUpdate("!HEV_DMG0", false, SUIT_NEXT_IN_30SEC);	// minor laceration
 
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_SLASH);
+#else
 			bitsDamage &= ~DMG_SLASH;
+#endif
 			ffound = true;
 		}
-		
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_SONIC))
+#else
 		if (bitsDamage & DMG_SONIC)
+#endif
 		{
 			if (fmajor)
 				SetSuitUpdate("!HEV_DMG2", false, SUIT_NEXT_IN_1MIN);	// internal bleeding
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_SONIC);
+#else
 			bitsDamage &= ~DMG_SONIC;
+#endif
 			ffound = true;
 		}
 
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_POISON) || hDamage.HasElement(DMG_PARALYZE))
+#else
 		if (bitsDamage & (DMG_POISON | DMG_PARALYZE))
+#endif
 		{
+#ifdef OFFSHORE_DLL
+			if (hDamage.HasElement(DMG_POISON))
+#else
 			if (bitsDamage & DMG_POISON)
+#endif
 			{
 				m_nPoisonDmg += info.GetDamage();
 				m_tbdPrev = gpGlobals->curtime;
@@ -1350,33 +1512,71 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			}
 
 			SetSuitUpdate("!HEV_DMG3", false, SUIT_NEXT_IN_1MIN);	// blood toxins detected
+
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_POISON);
+			hDamage.FindAndRemove(DMG_PARALYZE);
+#else
 			bitsDamage &= ~( DMG_POISON | DMG_PARALYZE );
+#endif
+			
 			ffound = true;
 		}
-
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_ACID))
+#else
 		if (bitsDamage & DMG_ACID)
+#endif
 		{
 			SetSuitUpdate("!HEV_DET1", false, SUIT_NEXT_IN_1MIN);	// hazardous chemicals detected
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_ACID);
+#else
 			bitsDamage &= ~DMG_ACID;
+#endif
 			ffound = true;
 		}
 
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_NERVEGAS))
+#else
 		if (bitsDamage & DMG_NERVEGAS)
+#endif
 		{
 			SetSuitUpdate("!HEV_DET0", false, SUIT_NEXT_IN_1MIN);	// biohazard detected
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_NERVEGAS);
+#else
 			bitsDamage &= ~DMG_NERVEGAS;
+#endif
 			ffound = true;
 		}
 
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_RADIATION))
+#else
 		if (bitsDamage & DMG_RADIATION)
+#endif
 		{
 			SetSuitUpdate("!HEV_DET2", false, SUIT_NEXT_IN_1MIN);	// radiation detected
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_RADIATION);
+#else
 			bitsDamage &= ~DMG_RADIATION;
+#endif
 			ffound = true;
 		}
+#ifdef OFFSHORE_DLL
+		if (hDamage.HasElement(DMG_SHOCK))
+#else
 		if (bitsDamage & DMG_SHOCK)
+#endif
 		{
+#ifdef OFFSHORE_DLL
+			hDamage.FindAndRemove(DMG_SHOCK);
+#else
 			bitsDamage &= ~DMG_SHOCK;
+#endif
 			ffound = true;
 		}
 	}
@@ -1418,7 +1618,11 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	}
 
 	// if we're taking time based damage, warn about its continuing effects
+#ifdef OFFSHORE_DLL
+	if (fTookDamage && g_pGameRules->Damage_IsTimeBased(info.GetDamageTypes()) && flHealthPrev < 75)
+#else
 	if (fTookDamage && g_pGameRules->Damage_IsTimeBased( info.GetDamageType() ) && flHealthPrev < 75)
+#endif
 		{
 			if (flHealthPrev < 50)
 			{
@@ -1430,7 +1634,11 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		}
 
 	// Do special explosion damage effect
+#ifdef OFFSHORE_DLL
+	if ( hDamage.HasElement(DMG_BLAST) )
+#else
 	if ( bitsDamage & DMG_BLAST )
+#endif
 	{
 		OnDamagedByExplosion( info );
 	}
@@ -1624,10 +1832,18 @@ const impactdamagetable_t &CBasePlayer::GetPhysicsImpactDamageTable()
 }
 
 static int g_PlayerHurtEvent = 0;
-int CBasePlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
+int CBasePlayer::OnTakeDamage_Alive(const CTakeDamageInfo &info)
 {
 	// set damage type sustained
+#ifdef OFFSHORE_DLL
+	FOR_EACH_VEC(*info.GetDamageTypes(),i)
+	{
+		if( !m_hDamageType.HasElement( info.GetDamageTypes()->Element(i) ) )
+			m_hDamageType.AddToTail( info.GetDamageTypes()->Element(i) );
+	}
+#else
 	m_bitsDamageType |= info.GetDamageType();
+#endif
 
 	if ( !BaseClass::OnTakeDamage_Alive( info ) )
 		return 0;
@@ -1999,9 +2215,13 @@ void CBasePlayer::WaterMove()
 			
 			// NOTE: this actually causes the count to continue restarting
 			// until all drowning damage is healed.
-
+#ifdef OFFSHORE_DLL
+			m_hDamageType.AddToTail(DMG_DROWNRECOVER);
+			m_hDamageType.FindAndRemove(DMG_DROWN);
+#else
 			m_bitsDamageType |= DMG_DROWNRECOVER;
 			m_bitsDamageType &= ~DMG_DROWN;
+#endif
 			m_rgbTimeBasedDamage[itbd_DrownRecover] = 0;
 		}
 
@@ -2009,7 +2229,11 @@ void CBasePlayer::WaterMove()
 	else
 	{	// fully under water
 		// stop restoring damage while underwater
+#ifdef OFFSHORE_DLL
+		m_hDamageType.FindAndRemove(DMG_DROWNRECOVER);
+#else
 		m_bitsDamageType &= ~DMG_DROWNRECOVER;
+#endif
 		m_rgbTimeBasedDamage[itbd_DrownRecover] = 0;
 
 		if (m_AirFinished < gpGlobals->curtime && !(GetFlags() & FL_GODMODE) )		// drown!
@@ -2023,7 +2247,12 @@ void CBasePlayer::WaterMove()
 					m_nDrownDmgRate = DROWNING_DAMAGE_MAX;
 				}
 
+#ifdef OFFSHORE_DLL
+				CUtlVector<int> hDamage; hDamage.AddToTail(DMG_DROWN);
+				OnTakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), m_nDrownDmgRate, &hDamage ) );
+#else
 				OnTakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), m_nDrownDmgRate, DMG_DROWN ) );
+#endif
 				m_PainFinished = gpGlobals->curtime + 1;
 				
 				// track drowning damage, give it back when
@@ -2034,7 +2263,11 @@ void CBasePlayer::WaterMove()
 		}
 		else
 		{
+#ifdef OFFSHORE_DLL
+			m_hDamageType.FindAndRemove(DMG_DROWN);
+#else
 			m_bitsDamageType &= ~DMG_DROWN;
+#endif
 		}
 	}
 
@@ -3956,7 +4189,11 @@ void CBasePlayer::CheckTimeBasedDamage()
 	static float gtbdPrev = 0.0;
 
 	// If we don't have any time based damage return.
+#ifdef OFFSHORE_DLL
+	if ( !g_pGameRules->Damage_IsTimeBased( &m_hDamageType ) )
+#else
 	if ( !g_pGameRules->Damage_IsTimeBased( m_bitsDamageType ) )
+#endif
 		return;
 
 	// only check for time based damage approx. every 2 seconds
@@ -3969,13 +4206,23 @@ void CBasePlayer::CheckTimeBasedDamage()
 	{
 		// Make sure the damage type is really time-based.
 		// This is kind of hacky but necessary until we setup DamageType as an enum.
+#ifdef OFFSHORE_DLL
+		int iDamage = DMG_PARALYZE + i;
+		CUtlVector<int> hDamageType; hDamageType.AddToTail(iDamage);
+		if ( !g_pGameRules->Damage_IsTimeBased( &hDamageType ) )
+#else
 		int iDamage = ( DMG_PARALYZE << i );
 		if ( !g_pGameRules->Damage_IsTimeBased( iDamage ) )
+#endif
 			continue;
 
 
 		// make sure bit is set for damage type
+#ifdef OFFSHORE_DLL
+		if ( m_hDamageType.HasElement(iDamage) )
+#else
 		if ( m_bitsDamageType & iDamage )
+#endif
 		{
 			switch (i)
 			{
@@ -4002,7 +4249,12 @@ void CBasePlayer::CheckTimeBasedDamage()
 				{
 					int idif = MIN(m_idrowndmg - m_idrownrestored, 10);
 
+#ifdef OFFSHORE_DLL
+					CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_GENERIC);
+					TakeHealth(idif, &hDamageType);
+#else
 					TakeHealth(idif, DMG_GENERIC);
+#endif
 					m_idrownrestored += idif;
 				}
 				bDuration = 4;	// get up to 5*10 = 50 points back
@@ -4015,7 +4267,12 @@ void CBasePlayer::CheckTimeBasedDamage()
 				if (m_nPoisonDmg > m_nPoisonRestored)
 				{
 					int nDif = MIN(m_nPoisonDmg - m_nPoisonRestored, 10);
+#ifdef OFFSHORE_DLL
+					CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+					TakeHealth(nDif, &hDamage);
+#else
 					TakeHealth(nDif, DMG_GENERIC);
+#endif
 					m_nPoisonRestored += nDif;
 				}
 				bDuration = 9;	// get up to 10*10 = 100 points back
@@ -4045,7 +4302,11 @@ void CBasePlayer::CheckTimeBasedDamage()
 				{
 					m_rgbTimeBasedDamage[i] = 0;
 					// if we're done, clear damage bits
+#ifdef OFFSHORE_DLL
+					m_hDamageType.FindAndRemove(iDamage);
+#else
 					m_bitsDamageType &= ~(DMG_PARALYZE << i);	
+#endif
 				}
 			}
 			else
@@ -4641,7 +4902,12 @@ void CBasePlayer::PostThink()
 
 		if ( gpGlobals->curtime > m_fTimeLastHurt + sv_regeneration_wait_time.GetFloat() )
 		{
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+			TakeHealth( 1, &hDamage );
+#else
 			TakeHealth( 1, DMG_GENERIC );
+#endif
 		}
 		else
 		{
@@ -4874,7 +5140,14 @@ CBaseEntity *CBasePlayer::EntSelectSpawnPoint()
 			{
 				// if ent is a client, kill em (unless they are ourselves)
 				if ( ent->IsPlayer() && !(ent->edict() == player) )
+#ifdef OFFSHORE_DLL
+				{
+					CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+					ent->TakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), 300, &hDamage ) );
+				}
+#else
 					ent->TakeDamage( CTakeDamageInfo( GetContainingEntity(INDEXENT(0)), GetContainingEntity(INDEXENT(0)), 300, DMG_GENERIC ) );
+#endif
 			}
 			goto ReturnSpot;
 		}
@@ -4968,8 +5241,13 @@ void CBasePlayer::Spawn( void )
 
 	m_DmgTake		= 0;
 	m_DmgSave		= 0;
+#ifdef OFFSHORE_DLL
+	m_hHUDDamage.Purge();
+	m_hDamageType.Purge();
+#else
 	m_bitsHUDDamage		= -1;
 	m_bitsDamageType	= 0;
+#endif
 	m_afPhysicsFlags	= 0;
 
 	m_idrownrestored = m_idrowndmg;
@@ -5005,8 +5283,13 @@ void CBasePlayer::Spawn( void )
 	// in the event that the player JUST spawned, and the level node graph
 	// was loaded, fix all of the node graph pointers before the game starts.
 	
-	m_bitsDamageType = 0;
+#ifdef OFFSHORE_DLL
+	m_hHUDDamage.Purge();
+	m_hDamageType.Purge();
+#else
 	m_bitsHUDDamage = -1;
+	m_bitsDamageType = 0;
+#endif
 	SetPlayerUnderwater( false );
 
 	m_iTrain = TRAIN_NEW;
@@ -5356,9 +5639,18 @@ void CBasePlayer::CommitSuicide( bool bExplode /*= false*/, bool bForce /*= fals
 
 	// have the player kill themself
 	m_iHealth = 0;
+#ifdef OFFSHORE_DLL
+	Event_Killed( CTakeDamageInfo( this, this, 0, fDamage, &m_hSuicideCustomKillFlags ) );
+#else
 	Event_Killed( CTakeDamageInfo( this, this, 0, fDamage, m_iSuicideCustomKillFlags ) );
+#endif
 	Event_Dying();
+
+#ifdef OFFSHORE_DLL
+	m_hSuicideCustomKillFlags.Purge();
+#else
 	m_iSuicideCustomKillFlags = 0;
+#endif
 }
 
 // Suicide with style...
@@ -6204,7 +6496,12 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 
 		if ( GetHealth() < 100 )
 		{
+#ifdef OFFSHORE_DLL
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+			TakeHealth( 25, &hDamage );
+#else
 			TakeHealth( 25, DMG_GENERIC );
+#endif
 		}
 		
 		gEvilImpulse101		= false;
@@ -6870,7 +7167,11 @@ void CBasePlayer::UpdateClientData( void )
 	}
 
 	// update the client with our poison state
+#ifdef OFFSHORE_DLL
+	m_Local.m_bPoisoned = ( m_hDamageType.HasElement(DMG_POISON) ) 
+#else
 	m_Local.m_bPoisoned = ( m_bitsDamageType & DMG_POISON ) 
+#endif
 						&& ( m_nPoisonDmg > m_nPoisonRestored ) 
 						&& ( m_iHealth < 100 );
 
@@ -8652,15 +8953,27 @@ void CBasePlayer::RemoveSuit( void )
 // Input  : &tr - 
 //			nDamageType - 
 //-----------------------------------------------------------------------------
+#ifdef OFFSHORE_DLL
+void CBasePlayer::DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType )
+#else
 void CBasePlayer::DoImpactEffect( trace_t &tr, int nDamageType )
+#endif
 {
 	if ( GetActiveWeapon() )
 	{
+#ifdef OFFSHORE_DLL
+		GetActiveWeapon()->DoImpactEffect( tr, hDamageType );
+#else
 		GetActiveWeapon()->DoImpactEffect( tr, nDamageType );
+#endif
 		return;
 	}
 
+#ifdef OFFSHORE_DLL
+	BaseClass::DoImpactEffect( tr, hDamageType );
+#else
 	BaseClass::DoImpactEffect( tr, nDamageType );
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -8672,14 +8985,24 @@ void CBasePlayer::InputSetHealth( inputdata_t &inputdata )
 	int iDelta = abs(GetHealth() - iNewHealth);
 	if ( iNewHealth > GetHealth() )
 	{
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+		TakeHealth( iDelta, &hDamage );
+#else
 		TakeHealth( iDelta, DMG_GENERIC );
+#endif
 	}
 	else if ( iNewHealth < GetHealth() )
 	{
 		// Strip off and restore armor so that it doesn't absorb any of this damage.
 		int armor = m_ArmorValue;
 		m_ArmorValue = 0;
+#ifdef OFFSHORE_DLL
+		CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+		TakeDamage( CTakeDamageInfo( this, this, iDelta, &hDamage ) );
+#else
 		TakeDamage( CTakeDamageInfo( this, this, iDelta, DMG_GENERIC ) );
+#endif
 		m_ArmorValue = armor;
 	}
 }

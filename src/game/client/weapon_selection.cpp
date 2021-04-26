@@ -184,7 +184,7 @@ void CBaseHudWeaponSelection::ProcessInput()
 
 			{
 				// Swallow the button
-				GetHud().m_iKeyBits &= ~(IN_ATTACK | IN_ATTACK2);
+				GetHud().m_iKeyBits &= ~( IN_ATTACK | IN_ATTACK2 );
 				input->ClearInputButton( IN_ATTACK );
 				input->ClearInputButton( IN_ATTACK2 );
 			}

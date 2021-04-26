@@ -863,7 +863,11 @@ public:
 	// This is what you should call to apply damage to an entity.
 	void TakeDamage( const CTakeDamageInfo &info );
 
-	virtual int		TakeHealth( float flHealth, int bitsDamageType );
+#ifdef OFFSHORE_DLL
+	virtual int				TakeHealth( float flHealth, CUtlVector<int> *hDamageType );
+#else
+	virtual int				TakeHealth( float flHealth, int bitsDamageType );
+#endif
 
 	virtual bool	IsAlive( void );
 	// Entity killed (only fired once)
@@ -877,7 +881,11 @@ public:
 	// UNDONE: Make this data?
 	virtual int				BloodColor( void );
 
-	void					TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType );
+#ifdef OFFSHORE_DLL
+	void					TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, CUtlVector<int> *hDamageType );
+#else
+	void					TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType )
+#endif
 	virtual bool			IsTriggered( CBaseEntity *pActivator ) {return true;}
 	virtual bool			IsNPC( void ) const { return false; }
 	virtual CAI_BaseNPC		*MyNPCPointer( void ); 
@@ -886,10 +894,17 @@ public:
 	virtual float			GetDelay( void ) { return 0; }
 	virtual bool			IsMoving( void );
 	bool					IsWorld() const { extern CWorld *g_WorldEntity; return (void *)this == (void *)g_WorldEntity; }
+#ifdef OFFSHORE_DLL
+	virtual char const		*DamageDecal( CUtlVector<int> *hDamageType, int gameMaterial );
+#else
 	virtual char const		*DamageDecal( int bitsDamageType, int gameMaterial );
+#endif
 	virtual void			DecalTrace( trace_t *pTrace, char const *decalName );
+#ifdef OFFSHORE_DLL
+	virtual void			ImpactTrace( trace_t *pTrace, CUtlVector<int> *hDamageType, char *pCustomImpactName = NULL );
+#else
 	virtual void			ImpactTrace( trace_t *pTrace, int iDamageType, char *pCustomImpactName = NULL );
-
+#endif
 	void			AddPoints( int score, bool bAllowNegativeScore );
 	void			AddPointsToTeam( int score, bool bAllowNegativeScore );
 	void			RemoveAllDecals( void );
@@ -1016,7 +1031,11 @@ public:
 	virtual void MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	virtual int	GetTracerAttachment( void );
 	virtual void FireBullets( const FireBulletsInfo_t &info );
+#ifdef OFFSHORE_DLL
+	virtual void DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType ); // give shooter a chance to do a custom impact.
+#else
 	virtual void DoImpactEffect( trace_t &tr, int nDamageType ); // give shooter a chance to do a custom impact.
+#endif
 
 	// OLD VERSION! Use the struct version
 	void FireBullets( int cShots, const Vector &vecSrc, const Vector &vecDirShooting, 
@@ -1120,7 +1139,9 @@ public:
 	void			CollisionRulesChanged();
 
 	// Damage accessors
-	virtual int		GetDamageType() const;
+#ifdef OFFSHORE_DLL
+	virtual CUtlVector<int> *GetDamageTypes() const;
+#endif
 	virtual float	GetDamage() { return 0; }
 	virtual void	SetDamage(float flDamage) {}
 
@@ -1610,7 +1631,7 @@ protected:
 
 	CNetworkVar( string_t, m_iName ); // name used to identify this entity
 
-
+	CUtlVector<int> m_hGenericDamage;
 
 	// Damage modifiers
 	friend class CDamageModifier;

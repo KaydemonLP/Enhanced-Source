@@ -55,10 +55,17 @@ public:
 		if ( GetServerVehicle() && GetServerVehicle()->IsPassengerExiting() )
 			return false;
 
+#ifdef OFFSHORE_DLL
+		if ( info.GetDamageTypes()->HasElement(DMG_VEHICLE) )
+			return true;
+
+		return (info.GetDamageTypes()->HasElement(DMG_RADIATION) || info.GetDamageTypes()->HasElement(DMG_BLAST)) == 0;
+#else
 		if ( info.GetDamageType() & DMG_VEHICLE )
 			return true;
 
 		return (info.GetDamageType() & (DMG_RADIATION|DMG_BLAST) ) == 0; 
+#endif
 	}
 
 	// CBaseEntity
@@ -84,7 +91,12 @@ public:
 	void			NPC_AimPrimaryWeapon( Vector vecTarget );
 
 	const char		*GetTracerType( void ) { return "AR2Tracer"; }
+
+#ifdef OFFSHORE_DLL
+	void			DoImpactEffect( trace_t &tr, CUtlVector<int> *hDamageType );
+#else
 	void			DoImpactEffect( trace_t &tr, int nDamageType );
+#endif
 
 	bool HeadlightIsOn( void ) { return m_bHeadlightIsOn; }
 	void HeadlightTurnOn( void ) { m_bHeadlightIsOn = true; }

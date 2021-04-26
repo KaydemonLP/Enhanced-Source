@@ -189,7 +189,12 @@ void CStatueProp::Event_Killed( const CTakeDamageInfo &info )
 void CStatueProp::Freeze( float flFreezeAmount, CBaseEntity *pFreezer, Ray_t *pFreezeRay )
 {
 	// Can't freeze a statue
+#ifdef OFFSHORE_DLL
+	CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+	TakeDamage( CTakeDamageInfo( pFreezer, pFreezer, 1, &hDamage ) );
+#else
 	TakeDamage( CTakeDamageInfo( pFreezer, pFreezer, 1, DMG_GENERIC ) );
+#endif
 }
 
 void CStatueProp::CollisionPartnerThink( void )
