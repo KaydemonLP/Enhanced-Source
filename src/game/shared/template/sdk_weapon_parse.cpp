@@ -116,7 +116,12 @@ void CSDKWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName 
 			hSphereAttackData.AddToTail( hFrame );
 		}
 
-		m_hHitBallAttack.AddToTail( hSphereAttackData );
+		// Only add if we actually have frame data
+		if( hSphereAttackData.hFrameData.Count() )
+			m_hHitBallAttack.AddToTail( hSphereAttackData );
+		else
+			Warning( "%s: Sphere data defined but no frames loaded!\n", szWeaponName );
+
 		i++;
 		pSphereAttackData = pKeyValuesData->FindKey( UTIL_VarArgs("SphereAttackData%d", i) );
 	}
@@ -140,11 +145,16 @@ void CSDKWeaponInfo::Parse( KeyValues *pKeyValuesData, const char *szWeaponName 
 		hMeleeAttack.m_iTPAct = (PlayerAnimEvent_t)UTIL_StringFieldToInt(pMeleeAttacks->GetString("ThirdPersonAct", '\0'), g_szAnimEventName, PLAYERANIMEVENT_COUNT);
 		hMeleeAttack.m_iWeight = pMeleeAttacks->GetInt("Weight", 0);
 
-		if( inputParser.ArgC() == 1 )
-			m_hBaseMeleeAttacks.AddToTail( hMeleeAttack );
+		// Only add it if we have the appropriate data
+		if( hMeleeAttack.m_iAttackData < m_hHitBallAttack.Count() )
+		{
+			if( inputParser.ArgC() == 1 )
+				m_hBaseMeleeAttacks.AddToTail( hMeleeAttack );
+			else
+				m_hSpecialMeleeAttacks.AddToTail( hMeleeAttack );
+		}
 		else
-			m_hSpecialMeleeAttacks.AddToTail( hMeleeAttack );
-
+			Warning( "%s: Melee Attack defined but no valid attack data selected!\n", szWeaponName );
 		i++;
 		pMeleeAttacks = pKeyValuesData->FindKey( UTIL_VarArgs("MeleeAttack%d", i) );
 	}

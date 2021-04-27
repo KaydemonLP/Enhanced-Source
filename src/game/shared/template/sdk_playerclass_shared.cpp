@@ -431,7 +431,7 @@ void CSDKPlayer::FireBullet(
 		{
 			// See if the bullet ended up underwater + started out of the water
 			if ( enginetrace->GetPointContents( tr.endpos ) & (CONTENTS_WATER|CONTENTS_SLIME) )
-			{	
+			{
 				trace_t waterTrace;
 				UTIL_TraceLine( vecSrc, tr.endpos, (MASK_SHOT|CONTENTS_WATER|CONTENTS_SLIME), this, COLLISION_GROUP_NONE, &waterTrace );
 

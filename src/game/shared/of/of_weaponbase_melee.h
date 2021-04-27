@@ -34,8 +34,11 @@ public:
 	virtual bool	HasAnyAmmo( void ){ return true ; }
 
 protected:
-#ifdef GAME_DLL
 	hitsphere_attack_t m_hCurrentAttackData;
+#ifdef CLIENT_DLL
+	CUtlVector<unsigned short> m_hHitSurfaces;
+#else
+	CUtlVector<int> m_hHitEntities;
 #endif
 	CNetworkVar( int, m_iAttackStage );
 	CNetworkVar( int, m_iWeight );
