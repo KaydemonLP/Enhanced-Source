@@ -21,9 +21,12 @@
 	"wall_climb_time"	"10"
 	"wall_run_time"		"10"
 	
+	"can_slide"	"1"
+	"can_wallrun" "1"
+	
 	"Weapons"
 	{
-		"Weapon"	"weapon_crowbar"
+		"Weapon"	"weapon_hand_to_hand"
 	}
 
 }

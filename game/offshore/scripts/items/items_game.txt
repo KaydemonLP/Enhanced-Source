@@ -1,0 +1,503 @@
+"ItemsGame"
+{
+	"Cosmetics"
+	{
+		"0"
+		{
+			"model"		"model.mdl"
+			"region"		"suit"
+			"backpack_icon"		"hud_thing"
+			"viewmodel"		"sleeves.mdl"
+			"Styles"
+			{
+				"1"
+				{
+					"model"		"alt_model.mdl"
+				}
+			}
+			"Bodygroups"
+			{
+				"torso"		"1"
+				"rightarm"		"1"
+				"leftarm"		"1"
+			}
+		}
+	}
+	"Weapons"
+	{
+		"weapon_akimbo_levers"
+		{
+			"weapon_class"		"of_weaponbase_ranged"
+			"attributes"
+			{
+				"damage multiplier"
+				{
+					"value"		"50"
+				}
+			}
+			"WeaponData"
+			{
+				// Weapon data is loaded by both the Game and Client DLLs.
+				"printname"			"#SDK_Shotgun"
+				
+				"Damage"	"10"
+				"bullets_per_shot"	"9"
+				
+				"fire_rate"			"0.6"
+				
+				"spread"			"0.1"
+				
+				"draw_time"			"0.5"
+				"reload_singly"		"1"
+				"reload_start"		"0.4"
+				"reload"			"0.6"
+				
+				"projectile_type"	"projectile_bullet"
+				
+				//How much in a clip?
+				"clip_size"	"8"
+				
+				"reserve_ammo"	"32"
+				// What ammo does it use?
+				"primary_ammo"			"shotgun"
+				"secondary_ammo"		"None"
+				
+				"akimbo_handed"		"1"
+				
+				// The view model
+				"viewmodel"			"models/weapons/v_models/v_shotgun_merc.mdl"
+
+				// World model
+				"playermodel"			"models/weapons/w_shotgun.mdl"
+
+				// Prefix
+				"anim_prefix"			"shotgun"
+
+				// Where should it be in the weapon selection?
+				"bucket"				"3"
+				"bucket_position"		"0"
+
+				// How major is this weapon? If we run out of ammo on another gun, the next weapon that would auto draw is the next "heavy" weapon.
+				"weight"				"4"
+				"rumble"			"5"
+
+				// ???
+				"item_flags"		"0"
+
+				// FOV of the viewmodel. (Float)
+				"fov" "54" 
+
+				// Sounds for the weapon. There is a max of 16 sounds per category (i.e. max 16 "single_shot" sounds)
+				SoundData
+				{
+
+					"empty"				"Weapon_Shotgun.Empty"
+					"reload"			"Weapon_Shotgun.Reload"
+					"special1"			"Weapon_Shotgun.Special1"
+					"single_shot"			"Weapon_Shotgun.Single"
+					"double_shot"			"Weapon_Shotgun.Double"
+
+					// NPC WEAPON SOUNDS
+					"reload_npc"		"Weapon_Shotgun.NPC_Reload"
+					"single_shot_npc"	"Weapon_Shotgun.NPC_Single"
+				}
+
+				// Weapon Sprite data is loaded by the Client DLL.
+				TextureData
+				{
+					"weapon"
+					{
+							"font"		"WeaponIcons"
+							"character"	"b"
+					}
+					"weapon_s"
+					{	
+							"font"		"WeaponIconsSelected"
+							"character"	"b"
+					}
+					"weapon_small"
+					{
+							"font"		"WeaponIconsSmall"
+							"character"	"b"
+					}
+					"ammo"
+					{
+							"font"		"WeaponIconsSmall"
+							"character"	"s"
+					}
+				}
+			}
+		}
+		
+		"weapon_custom_smg"
+		{
+			"weapon_class"		"of_weaponbase_ranged"
+			"attributes"
+			{
+				"damage multiplier"
+				{
+					"value"		"50"
+				}
+			}
+			"WeaponData"
+			{
+				// Weapon data is loaded by both the Game and Client DLLs.
+				"printname"			"#SDK_SMG"
+
+				"Damage"	"10"
+				"bullets_per_shot"	"1"
+
+				"fire_rate"			"0.1"
+
+				"spread"			"0.1"
+
+				"draw_time"			"0.1"
+				//"reload_singly"	"0"
+				//"reload_start"	"0"
+				"reload"			"1"
+
+				"projectile_type"	"projectile_bullet"
+
+				//How much in a clip?
+				"clip_size"	"15"
+
+				"reserve_ammo"	"60"
+				// What ammo does it use?
+				"primary_ammo"			"shotgun"
+				"secondary_ammo"		"None"
+
+				"akimbo_handed"		"1"
+
+				// The view model
+				"viewmodel"			"models/weapons/v_shotgun.mdl"
+
+				// World model
+				"playermodel"			"models/weapons/w_shotgun.mdl"
+
+				// Prefix
+				"anim_prefix"			"shotgun"
+
+				// Where should it be in the weapon selection?
+				"bucket"				"2"
+				"bucket_position"		"0"
+
+				// How major is this weapon? If we run out of ammo on another gun, the next weapon that would auto draw is the next "heavy" weapon.
+				"weight"				"4"
+				"rumble"			"5"
+
+				// ???
+				"item_flags"		"0"
+
+				// FOV of the viewmodel. (Float)
+				"fov" "54"
+
+				// Sounds for the weapon. There is a max of 16 sounds per category (i.e. max 16 "single_shot" sounds)
+				SoundData
+				{
+
+					"empty"				"Weapon_Shotgun.Empty"
+					"reload"			"Weapon_Shotgun.Reload"
+					"special1"			"Weapon_Shotgun.Special1"
+					"single_shot"			"Weapon_Shotgun.Single"
+					"double_shot"			"Weapon_Shotgun.Double"
+
+					// NPC WEAPON SOUNDS
+					"reload_npc"		"Weapon_Shotgun.NPC_Reload"
+					"single_shot_npc"	"Weapon_Shotgun.NPC_Single"
+				}
+
+				// Weapon Sprite data is loaded by the Client DLL.
+				TextureData
+				{
+					"weapon"
+					{
+							"font"		"WeaponIcons"
+							"character"	"b"
+					}
+					"weapon_s"
+					{	
+							"font"		"WeaponIconsSelected"
+							"character"	"b"
+					}
+					"weapon_small"
+					{
+							"font"		"WeaponIconsSmall"
+							"character"	"b"
+					}
+					"ammo"
+					{
+							"font"		"WeaponIconsSmall"
+							"character"	"s"
+					}
+				}
+			}
+		}
+		
+		"weapon_hand_to_hand"
+		{
+			"weapon_class"		"of_weaponbase_melee"
+			"attributes"
+			{
+				"damage multiplier"
+				{
+					"value"		"50"
+				}
+			}
+			"WeaponData"
+			{
+				// Weapon data is loaded by both the Game and Client DLLs.
+				"printname"			"#SDK_SMG"
+
+				"Damage"	"100"
+				"bullets_per_shot"	"1"
+
+				"fire_rate"			"0.1"
+
+				"spread"			"0.1"
+
+				"draw_time"			"0.1"
+				//"reload_singly"	"0"
+				//"reload_start"	"0"
+				"reload"			"1"
+
+				"projectile_type"	"projectile_bullet"
+
+				//How much in a clip?
+				"clip_size"	"-1"
+
+				"reserve_ammo"	"-1"
+				// What ammo does it use?
+				"primary_ammo"			"shotgun"
+				"secondary_ammo"		"None"
+
+				"akimbo_handed"		"1"
+
+				// The view model
+				"viewmodel"			"models/weapons/v_crowbar.mdl"
+
+				// World model
+				"playermodel"			"models/weapons/w_shotgun.mdl"
+
+				// Prefix
+				"anim_prefix"			"shotgun"
+
+				// Where should it be in the weapon selection?
+				"bucket"				"0"
+				"bucket_position"		"1"
+
+				// How major is this weapon? If we run out of ammo on another gun, the next weapon that would auto draw is the next "heavy" weapon.
+				"weight"				"4"
+				"rumble"			"5"
+
+				// ???
+				"item_flags"		"0"
+
+				// FOV of the viewmodel. (Float)
+				"fov" "54" 
+				
+				"SphereAttackData0"
+				{
+					"1"
+					{
+						"Duration" "0.01"
+						
+						"Spheres"
+						{
+							"0.0 0.0 -0.0"		"15"
+							"7.5 0.0 -0.0"		"15"
+							"15 0.0 -0.0"		"15"
+						}
+					}
+
+					"2"
+					{
+						"Duration" "0.15"
+						
+						"Spheres"
+						{
+							"0.0 0.0 -0.0"		"15"
+							"15 0.0 -0.0"		"15"
+							"60 0.0 -0.0"		"15"
+						}
+					}
+					"3"
+					{
+						"Duration" "0.4"
+						
+						"Spheres"
+						{
+							"0.0 0.0 -0.0"		"15"
+							"10 0.0 -0.0"		"15"
+							"20 0.0 -0.0"		"15"
+						}
+					}
+					"1"
+					{
+						"Duration" "0.1"
+						
+						"Spheres"
+						{
+							"0.0 0.0 -0.0"		"15"
+							"7.5 0.0 -0.0"		"15"
+							"15 0.0 -0.0"		"15"
+						}
+					}
+					// Wind down
+					"4"
+					{
+						"Duration" "0.3"
+					}
+				}
+				
+				"SphereAttackData1"
+				{
+					"1"
+					{
+						"Duration" "0.1"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+						}
+					}
+
+					"2"
+					{
+						"Duration" "0.05"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+							"150 0.0 -50.0"		"15"
+						}
+					}
+					"3"
+					{
+						"Duration" "0.025"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+							"150 0.0 -50.0"		"15"
+							"150 0.0 -30.0"		"15"
+						}
+					}
+					"4"
+					{
+						"Duration" "1"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+							"150 0.0 -50.0"		"15"
+							"150 0.0 -30.0"		"15"
+							"150 0.0 -10.0"		"15"
+						}
+					}
+					"5"
+					{
+						"Duration" "0.05"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+							"150 0.0 -50.0"		"15"
+							"150 0.0 -30.0"		"15"
+						}
+					}
+					"6"
+					{
+						"Duration" "0.05"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+							"150 0.0 -50.0"		"15"
+						}
+					}
+					"7"
+					{
+						"Duration" "0.05"
+						
+						"Spheres"
+						{
+							"150 0.0 -70.0"		"15"
+						}
+					}
+					// Wind down
+					"8"
+					{
+						"Duration" "0.1"
+					}
+				}
+				
+				"MeleeAttack0"
+				{
+					"AttackData"		"0"
+					"Input"				"IN_ATTACK"
+					"ViewmodelAct" 		"ACT_VM_HITCENTER"
+					"ThirdPersonAct" 	"PLAYERANIMEVENT_FIRE_GUN_PRIMARY"
+					
+					"Weight"	"0"
+				}
+				
+				"MeleeAttack1"
+				{
+					"AttackData"		"1"
+					"Input"				"IN_ATTACK2"
+					"ViewmodelAct" 		"ACT_VM_DRAW"
+					"ThirdPersonAct" 	"PLAYERANIMEVENT_FIRE_GUN_PRIMARY"
+					
+					"Weight"	"0"
+				}
+
+				// Sounds for the weapon. There is a max of 16 sounds per category (i.e. max 16 "single_shot" sounds)
+				SoundData
+				{
+
+					"empty"				"Weapon_Shotgun.Empty"
+					"reload"			"Weapon_Shotgun.Reload"
+					"special1"			"Weapon_Shotgun.Special1"
+					"single_shot"			"Weapon_Shotgun.Single"
+					"double_shot"			"Weapon_Shotgun.Double"
+
+					// NPC WEAPON SOUNDS
+					"reload_npc"		"Weapon_Shotgun.NPC_Reload"
+					"single_shot_npc"	"Weapon_Shotgun.NPC_Single"
+				}
+
+				// Weapon Sprite data is loaded by the Client DLL.
+				TextureData
+				{
+					"weapon"
+					{
+							"font"		"WeaponIcons"
+							"character"	"b"
+					}
+					"weapon_s"
+					{	
+							"font"		"WeaponIconsSelected"
+							"character"	"b"
+					}
+					"weapon_small"
+					{
+							"font"		"WeaponIconsSmall"
+							"character"	"b"
+					}
+					"ammo"
+					{
+							"font"		"WeaponIconsSmall"
+							"character"	"s"
+					}
+				}
+			}
+		}
+	}
+	"Attributes"
+	{
+		"1"
+		{
+			"name"		"damage multiplier"
+		}
+	}
+}

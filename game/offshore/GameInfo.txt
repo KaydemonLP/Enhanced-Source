@@ -42,11 +42,12 @@
 			Game				|gameinfo_path|.
 
 			Game				offshore
-			
-			Game				"E:\Moding games\steamapps\common\SourceFilmmaker\game\hl2"
 
 			// Like the Source 2006 base, you need to include this folder as it has ALL of the content that is mostly shared.
 			Game				core
+			
+			Game				"E:\Moding games\steamapps\common\Portal 2\portal2\pak01_dir"
+			Game				"E:\Moding games\steamapps\common\Portal 2\portal2\"
 
 			// The platform folder, has the stuff to make the engine run.
 			Game				platform

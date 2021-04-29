@@ -7,7 +7,7 @@
 	"LeftArm"	"models/arms/quaker/v_left_arm.mdl"
 	
 	// "playermodel"	"models/player/quaker.mdl"
-	"playermodel"	"models/player.mdl"
+	"playermodel"	"models/player/blue_player.mdl"
 	
 	"step_speed"	"0.45"
 
@@ -17,13 +17,13 @@
 	"eye_height"	"72"
 	
 	"wall_jump_time"	"0.5"
-	
+
 	"jump_count"	"2"
 	
 	"Weapons"
 	{
-		"Weapon"	"weapon_shotgun"
-		"Weapon"	"weapon_smg"
+		"Weapon"	"weapon_akimbo_levers"
+		"Weapon"	"weapon_custom_smg"
 		"Weapon"	"weapon_crowbar"
 	}
 }
