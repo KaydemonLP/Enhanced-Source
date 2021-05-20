@@ -51,3 +51,8 @@ $Project "game_shader"
 	"materialsystem\deferredshaders\game_shader_generic_deferred.vpc"	[$DEFERRED]
 	"materialsystem\deferredshaders\game_shader_generic_deferred.vpc"	[$OFFSHORE]
 }
+
+$Project "vgui_controls"
+{
+	"public\vgui2\vgui_controls\vgui_controls.vpc"
+}
