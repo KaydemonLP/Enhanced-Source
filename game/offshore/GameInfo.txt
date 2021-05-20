@@ -39,15 +39,14 @@
 		SearchPaths
 		{
 			// Look for our content under our gamepath. pak01_dir will be read first, then loose files.
-			Game				|gameinfo_path|.
+			"Game+game_write+mod+mod_write+default_write_path"		|gameinfo_path|.
 
 			Game				offshore
 
 			// Like the Source 2006 base, you need to include this folder as it has ALL of the content that is mostly shared.
 			Game				core
 			
-			Game				"E:\Moding games\steamapps\common\Portal 2\portal2\pak01_dir"
-			Game				"E:\Moding games\steamapps\common\Portal 2\portal2\"
+			Game				third_party
 
 			// The platform folder, has the stuff to make the engine run.
 			Game				platform

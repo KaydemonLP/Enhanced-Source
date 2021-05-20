@@ -40,8 +40,8 @@ protected:
 	virtual void OnCommand( const char *command );
 
 private:
-	static void AcceptLanguageChangeCallback();
-	static void CancelLanguageChangeCallback();
+	static void AcceptLanguageChangeCallback( void *var );
+	static void CancelLanguageChangeCallback( void *var );
 	void UpdateFooter();
 
 	SliderControl* m_sldBrightness;

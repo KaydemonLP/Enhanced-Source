@@ -288,12 +288,11 @@ void IBotSchedule::TaskStart()
 
         case BTASK_PLAY_ANIMATION:
         {
-			// STICKYNOTE: Implement!!
-            //Activity activity = (Activity)pTask->iValue;
+            Activity activity = (Activity)pTask->iValue;
 #ifdef INSOURCE_DLL
             GetHost()->DoAnimationEvent( PLAYERANIMEVENT_CUSTOM, activity );
 #else
-            Assert( !"Implement in your mod" );
+            GetHost()->DoAnimationEvent( PLAYERANIMEVENT_CUSTOM, activity );
             TaskComplete();
 #endif
             break;
@@ -301,12 +300,11 @@ void IBotSchedule::TaskStart()
 
         case BTASK_PLAY_GESTURE:
         {
-			// STICKYNOTE: Imlpement!
-            //Activity activity = (Activity)pTask->iValue;
+            Activity activity = (Activity)pTask->iValue;
 #ifdef INSOURCE_DLL
             GetHost()->DoAnimationEvent( PLAYERANIMEVENT_CUSTOM_GESTURE, activity );
 #else
-            Assert( !"Implement in your mod" );
+            GetHost()->DoAnimationEvent( PLAYERANIMEVENT_CUSTOM_GESTURE, activity );
 #endif
             TaskComplete();
             break;
@@ -564,12 +562,8 @@ void IBotSchedule::TaskStart()
         // NOTE: This is only a test
         case BTASK_HEAL:
         {
-#ifdef OFFSHORE_DLL
-			CUtlVector<int> hDamageType; hDamageType.AddToTail(DMG_GENERIC);
-			GetHost()->TakeHealth(30.0f, &hDamageType);
-#else
-			GetHost()->TakeHealth( 30.0f, DMG_GENERIC );
-#endif
+			CUtlVector<int> hDamage; hDamage.AddToTail(DMG_GENERIC);
+            GetHost()->TakeHealth( 30.0f, &hDamage );
             TaskComplete();
             break;
         }

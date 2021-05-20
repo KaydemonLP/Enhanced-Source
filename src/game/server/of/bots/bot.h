@@ -34,6 +34,7 @@ public:
     DECLARE_CLASS_GAMEROOT( CBot, IBot );
 
     CBot( CBasePlayer *parent );
+	~CBot( void );
 
 public:
     virtual void Spawn();
@@ -206,8 +207,7 @@ public:
     float operator() ( CNavArea *area, CNavArea *fromArea, const CNavLadder *ladder, const CFuncElevator *elevator, float length )
     {
         float baseDangerFactor = 100.0f;
-		// STICKYNOTE: Why isnt this used?
-        //float dangerFactor = (1.0f - (0.95f * m_pBot->GetProfile()->GetAggression())) * baseDangerFactor;
+        float dangerFactor = (1.0f - (0.95f * m_pBot->GetProfile()->GetAggression())) * baseDangerFactor;
         float dist;
 
         if ( fromArea == NULL )
@@ -348,7 +348,8 @@ public:
         }
 
         // add in the danger of this path - danger is per unit length travelled
-        cost += dist * baseDangerFactor * area->GetDanger( m_pBot->GetHost()->GetTeamNumber() );
+		// ORIGINALY BASE DANGER FACTOR!!
+		cost += dist * dangerFactor * area->GetDanger(m_pBot->GetHost()->GetTeamNumber());
 
         return cost;
     }

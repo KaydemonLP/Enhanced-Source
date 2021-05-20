@@ -43,9 +43,8 @@ void CBotAttack::Update()
 //================================================================================
 void CBotAttack::FiregunAttack()
 {
-    CBaseWeapon *pWeapon = GetHost()->GetActiveBaseWeapon();
-	if( !pWeapon )
-		return;
+//    CBaseWeapon *pWeapon = GetHost()->GetActiveBaseWeapon();
+//    Assert( pWeapon );
 
     // Check to see if we can crouch for accuracy
     if ( GetDecision()->CanCrouchAttack() ) {

@@ -8,6 +8,7 @@
 #include "VGenericConfirmation.h"
 
 #include "vgui_controls/Label.h"
+#include "vgui_controls/TextEntry.h"
 #include "vgui/ISurface.h"
 #include "nb_button.h"
 #include "cdll_util.h"
@@ -41,7 +42,8 @@ GenericConfirmation::GenericConfirmation( Panel *parent, const char *panelName )
 	m_pLblCheckBox( 0 ),
 	m_data(),
 	m_usageId( 0 ),
-	m_pCheckBox( 0 )
+	m_pCheckBox( 0 ),
+	m_pTextEntry( 0 )
 {
 	SetProportional( true );
 
@@ -69,6 +71,7 @@ GenericConfirmation::~GenericConfirmation()
 	delete m_pLblCancelButton;
 	delete m_pLblCancelText;
 	delete m_pPnlLowerGarnish;
+	delete m_pTextEntry;
 }
 
 //=============================================================================
@@ -109,7 +112,14 @@ void GenericConfirmation::OnKeyCodePressed( KeyCode keycode )
 
 			if ( m_data.pfnOkCallback != 0 )
 			{
-				m_data.pfnOkCallback();
+				if( m_pTextEntry )
+				{
+					char szTextEntry[128];
+					m_pTextEntry->GetText(szTextEntry, sizeof(szTextEntry));
+					m_data.pfnOkCallback(szTextEntry);
+				}
+				else
+					m_data.pfnOkCallback(NULL);
 			}
 		}
 		break;
@@ -130,7 +140,7 @@ void GenericConfirmation::OnKeyCodePressed( KeyCode keycode )
 
 			if ( m_data.pfnCancelCallback != 0 )
 			{
-				m_data.pfnCancelCallback();
+				m_data.pfnCancelCallback(NULL);
 			}
 		}
 		break;
@@ -247,8 +257,19 @@ void GenericConfirmation::LoadLayout()
 			checkBoxGap = boxTall * 2;
 			dialogHeight += checkBoxGap;
 		}
-	}
 
+		if ( m_pTextEntry )
+		{
+			if ( dialogWidth < msgWide + shimX )
+			{
+				dialogWidth += msgWide + shimX;
+			}
+			if ( dialogHeight < msgTall + shimY )
+			{
+				dialogHeight += msgTall + shimY;
+			}
+		}
+	}
 
 	// In the Xbox, OK/Cancel xbox buttons use the same font and are the same size, use the OK button
 	int buttonWide = 0;
@@ -297,8 +318,18 @@ void GenericConfirmation::LoadLayout()
 		// center the message
 		int msgWide, msgTall;
 		m_pLblMessage->GetContentSize( msgWide, msgTall );
-		m_pLblMessage->SetPos( ( dialogWidth - msgWide ) / 2, ( dialogHeight - checkBoxGap - msgTall ) / 2 );
+		m_pLblMessage->SetPos( ( dialogWidth - msgWide ) / 2, (( dialogHeight - checkBoxGap - msgTall ) / 2 ) );
 		m_pLblMessage->SetSize( msgWide, msgTall );
+
+		if ( m_pTextEntry )
+		{
+			// Move the text up
+			m_pLblMessage->SetPos( ( dialogWidth - msgWide ) / 2, (( dialogHeight - checkBoxGap - msgTall ) / 2 ) - msgTall);
+			m_pTextEntry->SetPos( ( dialogWidth - msgWide )/ 2, ( dialogHeight - checkBoxGap - msgTall ) / 2 );
+			m_pTextEntry->SetSize( msgWide, msgTall );
+
+			msgTall *= 2;
+		}
 
 		if ( m_pCheckBox )
 		{
@@ -500,11 +531,23 @@ int GenericConfirmation::SetUsageData( const Data_t & data )
 		m_pLblMessage->DeletePanel();
 		m_pLblMessage = NULL;
 	}
-	
+
+	if( m_pTextEntry )
+	{
+		m_pTextEntry->DeletePanel();
+		m_pTextEntry = NULL;
+	}
+
 	if ( data.pMessageTextW )
 		m_pLblMessage = new Label( this, "LblMessage", data.pMessageTextW );
 	else
 		m_pLblMessage = new Label( this, "LblMessage", data.pMessageText );
+
+	if( m_pLblMessage && data.bTextEntryEnabled )
+	{
+		m_pTextEntry = new TextEntry( this, "TxtEntry" );
+		m_pTextEntry->SetEditable( true );		
+	}
 
 	// tell our base version so input is disabled
 	m_OkButtonEnabled = data.bOkButtonEnabled;
@@ -567,6 +610,11 @@ void GenericConfirmation::ApplySchemeSettings(IScheme *pScheme)
 	if ( m_pLblMessage )
 	{
 		m_pLblMessage->SetFont( m_hMessageFont );
+	}
+
+	if( m_pTextEntry )
+	{
+		m_pTextEntry->SetFont( m_hMessageFont );
 	}
 
 	if ( m_pLblCheckBox )

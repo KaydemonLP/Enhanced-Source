@@ -30,10 +30,11 @@ END_RECV_TABLE()
 LINK_ENTITY_TO_CLASS( player, C_SDKPlayer );
 #endif
 
-IMPLEMENT_CLIENTCLASS_DT(C_SDKPlayer, DT_SDKPlayer, CSDKPlayer)
-	RecvPropBool(  RECVINFO(m_bPlayerPickedUpObject) ),
+IMPLEMENT_CLIENTCLASS_DT( C_SDKPlayer, DT_SDKPlayer, CSDKPlayer )
+	RecvPropBool( RECVINFO( m_bPlayerPickedUpObject ) ),
 	RecvPropInt( RECVINFO( m_iShotsFired ) ),
 	RecvPropInt( RECVINFO( m_iClassNumber ) ),
+	RecvPropBool( RECVINFO( m_bReady ) ),
 	RecvPropDataTable( RECVINFO_DT( m_PlayerShared ), 0, &REFERENCE_RECV_TABLE( DT_SDKPlayerShared ) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[0] ) ),
 	RecvPropFloat( RECVINFO( m_angEyeAngles[1] ) ),

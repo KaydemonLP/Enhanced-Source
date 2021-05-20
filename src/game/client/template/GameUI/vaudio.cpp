@@ -1039,7 +1039,7 @@ void Audio::OpenThirdPartySoundCreditsDialog()
 	m_OptionsSubAudioThirdPartyCreditsDlg->Activate();
 }
 
-void Audio::AcceptLanguageChangeCallback() 
+void Audio::AcceptLanguageChangeCallback( void *var )
 {
 	Audio *self = static_cast< Audio * >( CBaseModPanel::GetSingleton().GetWindow( WT_AUDIO ) );
 	if( self )
@@ -1049,7 +1049,7 @@ void Audio::AcceptLanguageChangeCallback()
 }
 
 //=============================================================================
-void Audio::CancelLanguageChangeCallback()
+void Audio::CancelLanguageChangeCallback( void *var )
 {
 	Audio *self = static_cast< Audio * >( CBaseModPanel::GetSingleton().GetWindow( WT_AUDIO ) );
 	if( self )

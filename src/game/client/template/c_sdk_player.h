@@ -66,8 +66,12 @@ public:
 
 	virtual int 	GetClassNumber() { return m_iClassNumber; }
 
+	// Campaign Stuff
+	bool IsReady(){ return m_bReady; }
+
 	// Shared Functions
 	virtual const QAngle &EyeAngles();
+	virtual uint32 GetSteamID( void );
 public:
 	// ISDKPlayerAnimState overrides.
 	virtual CBaseSDKCombatWeapon* SDKAnim_GetActiveWeapon();
@@ -128,6 +132,7 @@ private:
 	QAngle m_angRender;
 
 	CNetworkVar( int, m_iClassNumber );
+	CNetworkVar( bool, m_bReady );
 };
 
 inline C_SDKPlayer* ToSDKPlayer( CBaseEntity *pEntity )

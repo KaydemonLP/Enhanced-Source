@@ -46,6 +46,13 @@ const char *g_szInputNames[] =
 	"IN_LOOKSPIN"
 };
 
+const char *g_szTeamNames[] = 
+{
+	"unassigned",
+	"funny",
+	"unfunny"
+};
+
 const char *g_szAnimEventName[] =
 {
 	"PLAYERANIMEVENT_FIRE_GUN_PRIMARY",

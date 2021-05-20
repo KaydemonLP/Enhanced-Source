@@ -1110,10 +1110,13 @@ BCOND CBotDecision::ShouldRangeAttack1()
 
     if ( flDistance > pWeapon->GetWeaponInfo().m_flIdealDistance )
         return BCOND_TOO_FAR_TO_ATTACK;
-#else
+#elif HL2MP
     if ( flDistance > 600.0f )
         return BCOND_TOO_FAR_TO_ATTACK;
-#endif    
+#elif OFFSHORE_DLL
+    if( flDistance > 600.0f )
+        return BCOND_TOO_FAR_TO_ATTACK;
+#endif 
 
     // A better way to do this and move it to a better place.
     float fireRate = pWeapon->GetFireRate();

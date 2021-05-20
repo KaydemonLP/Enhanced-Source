@@ -9,6 +9,8 @@
 	// "playermodel"	"models/player/quaker.mdl"
 	"playermodel"	"models/player/blue_player.mdl"
 	
+	"class_image" "../hud/lobby/class_portraits/quaker_temp"
+	
 	"step_speed"	"0.45"
 
 	"health"		"150"

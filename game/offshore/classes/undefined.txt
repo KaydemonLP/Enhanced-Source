@@ -1,0 +1,21 @@
+"Undefined"
+{
+	// The Non Defined Class file BF
+	"classname"				"undefined"
+	"classname_localized"	"OF_CLASS_UNDEFINED"
+
+	"RightArm"	"models/arms/quaker/v_right_arm.mdl"
+	"LeftArm"	"models/arms/quaker/v_left_arm.mdl"
+	
+	// "playermodel"	"models/player/quaker.mdl"
+	"playermodel"	"models/player/blue_player.mdl"
+	
+	"step_speed"	"0.01"
+
+	"health"		"1"
+
+	"speed"			"666"
+	"eye_height"	"200"
+	
+	"playable"		"0"
+}

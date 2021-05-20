@@ -83,7 +83,7 @@ $Project "Server (Offshore)"
 					$File	"of/bots/interfaces/ibotmemory.h"
 					$File	"of/bots/interfaces/ibotschedule.h"
 					$File	"of/bots/interfaces/ibotvision.h"
-					$File	"of/bots/interfaces/improv_locomotor.h"
+					$File	"of/bots/interfaces/improv.h"
 				}
 
 				$Folder	"Schedules"

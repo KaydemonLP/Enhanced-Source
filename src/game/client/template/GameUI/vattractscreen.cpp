@@ -96,7 +96,11 @@ static bool IsPrimaryUserSignedInProperly()
 	return IsUserSignedInProperly( s_idPrimaryUser );
 }
 
-static void ChangeGamers();
+static void ChangeGamers( void *var = NULL );
+static void ChangeGamersNoVar( void )
+{
+	ChangeGamers();
+}
 
 
 // safe to reset timeout to TCR 003: 120 seconds
@@ -1098,7 +1102,7 @@ void CAttractScreen::ShowSignInDialog( int iPrimaryUser, int iSecondaryUser, Bla
 	}
 }
 
-static void PlayGameWithTemporaryProfile();
+static void PlayGameWithTemporaryProfile(void *var);
 void CAttractScreen::StartGameWithTemporaryProfile_Stage1()
 {
 	if ( UI_IsDebug() )
@@ -1120,7 +1124,7 @@ void CAttractScreen::StartGameWithTemporaryProfile_Stage1()
 	data.pfnCancelCallback = ChangeGamers;
 
 	m_msgData = confirmation->SetUsageData(data);
-	m_pfnMsgChanged = ChangeGamers;
+	m_pfnMsgChanged = ChangeGamersNoVar;
 
 	HideFooter();
 }
@@ -1151,7 +1155,7 @@ void CAttractScreen::StartGameWithTemporaryProfile_Real()
 #endif //defined( _X360 )
 }
 
-static void ChangeGamers()
+static void ChangeGamers( void *var )
 {
 	CAttractScreen::SetAttractMode( CAttractScreen::ATTRACT_GAMESTART );
 	if ( CAttractScreen* attractScreen = static_cast< CAttractScreen* >(
@@ -1161,7 +1165,7 @@ static void ChangeGamers()
 	}
 }
 
-static void PlayGameWithTemporaryProfile()
+static void PlayGameWithTemporaryProfile( void *var )
 {
 	if ( CAttractScreen* attractScreen = static_cast< CAttractScreen* >( CBaseModPanel::GetSingleton().GetWindow( WT_ATTRACTSCREEN ) ) )
 	{
@@ -1335,7 +1339,7 @@ void CAttractScreen::StartGame( int idxUser1 /* = -1 */, int idxUser2 /* = -1 */
 
 }
 
-static void StorageContinue()
+static void StorageContinue( void *var = NULL )
 {
 	if ( UI_IsDebug() )
 	{
@@ -1365,7 +1369,7 @@ static void StorageContinue()
 	}
 }
 
-static void StorageSelectAgain()
+static void StorageSelectAgain( void *var )
 {
 	if ( UI_IsDebug() )
 	{
@@ -1439,7 +1443,7 @@ void CAttractScreen::ReportDeviceFail( ISelectStorageDeviceClient::FailReason_t 
 	data.pfnCancelCallback = StorageSelectAgain;
 
 	m_msgData = confirmation->SetUsageData(data);
-	m_pfnMsgChanged = ChangeGamers;
+	m_pfnMsgChanged = ChangeGamersNoVar;
 
 	HideFooter();
 }

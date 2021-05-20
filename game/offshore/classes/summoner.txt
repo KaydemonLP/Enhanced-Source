@@ -1,0 +1,28 @@
+"Tesla"
+{
+	"classname"				"tesla"
+	"classname_localized"	"OF_CLASS_SURPLEX"
+
+	"RightArm"	"models/arms/tesla/v_right_arm.mdl"
+	"LeftArm"	"models/arms/tesla/v_left_arm.mdl"
+	
+	// "playermodel"	"models/player/surplex.mdl"
+	"playermodel"	"models/player/blue_player.mdl"
+	
+	"class_image" "../hud/lobby/class_portraits/tesla_temp"
+
+	"step_speed"	"0.35"
+
+	"health"		"175"
+
+	"speed"			"300"
+	"eye_height"	"72"
+	
+	"Weapons"
+	{
+		"Weapon"	"weapon_laser_rifle"
+		"Weapon"	"weapon_revolver"
+		"Weapon"	"weapon_power_glove"
+	}
+
+}

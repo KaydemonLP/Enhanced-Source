@@ -31,6 +31,8 @@
 
 #include "datacache/imdlcache.h"
 
+#include "of_shared_schemas.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -86,7 +88,8 @@ CPlayer *CreateBot( const char *pPlayername, const Vector *vecPosition, const QA
     edict_t *pSoul = engine->CreateFakeClient( pPlayername );
     Assert( pSoul );
 
-    if ( !pSoul ) {
+    if ( !pSoul ) 
+	{
         Warning( "There was a problem creating a bot. Maybe there is no more space for players on the server." );
         return NULL;
     }
@@ -98,17 +101,19 @@ CPlayer *CreateBot( const char *pPlayername, const Vector *vecPosition, const QA
     pPlayer->AddFlag( FL_CLIENT | FL_FAKECLIENT );
 
     // This is where we implement the Artificial Intelligence. 
-	pPlayer->SetUpBot();
+    pPlayer->SetUpBot();
     Assert( pPlayer->GetBotController() );
 
-    if ( !pPlayer->GetBotController() ) {
+    if ( !pPlayer->GetBotController() ) 
+	{
         Warning( "There was a problem creating a bot. The player was created but the controller could not be created." );
         return NULL;
     }
 
     pPlayer->Spawn();
 
-    if ( vecPosition ) {
+    if ( vecPosition ) 
+	{
         pPlayer->Teleport( vecPosition, angles, NULL );
     }
 
@@ -152,9 +157,15 @@ void CBot::Spawn()
     m_iRepeatedDamageTimes = 0;
     m_flDamageAccumulated = 0.0f;
 
-    if ( GetMemory() ) {
+    if ( GetMemory() ) 
+	{
         GetMemory()->UpdateDataMemory( MEMORY_SPAWN_POSITION, GetAbsOrigin() );
     }
+}
+
+CBot::~CBot( void )
+{
+	g_botID--;
 }
 
 //================================================================================
@@ -325,10 +336,8 @@ void CBot::ApplyDebugCommands()
     else GetHost()->RemoveFlag( FL_NOTARGET );
 
     // Buddha
-    if ( bot_buddha.GetBool() ) 
-		GetHost()->m_debugOverlays = GetHost()->m_debugOverlays | OVERLAY_BUDDHA_MODE;
-	else if( GetHost()->m_debugOverlays & OVERLAY_BUDDHA_MODE ) 
-		GetHost()->m_debugOverlays &= ~OVERLAY_BUDDHA_MODE;
+    if ( bot_buddha.GetBool() ) GetHost()->m_debugOverlays = GetHost()->m_debugOverlays | OVERLAY_BUDDHA_MODE;
+    else GetHost()->m_debugOverlays = GetHost()->m_debugOverlays & ~OVERLAY_BUDDHA_MODE;
 
     // Forced Crouch
     if ( bot_crouch.GetBool() ) {
@@ -533,15 +542,24 @@ CON_COMMAND_F( bot_add, "Adds a specified number of generic bots", FCVAR_SERVER 
     count = clamp( count, 1, 16 );
 
     // Ok, spawn all the bots.
-    while ( --count >= 0 ) {
+    while ( --count >= 0 ) 
+	{
         CPlayer *pPlayer = CreateBot( NULL, NULL, NULL );
         Assert( pPlayer );
 
-        if ( pPlayer ) {
-            if ( bot_team.GetInt() > 0 ) {
-                pPlayer->ChangeTeam( bot_team.GetInt() );
+        if ( pPlayer ) 
+		{
+            if ( bot_team.GetInt() > 0 ) 
+			{
+                pPlayer->ChangeTeam( bot_team.GetInt() - 1 );
             }
-        }
+			else
+				pPlayer->ChangeTeam( args.FindArgInt( "-team", OF_TEAM_UNASSIGNED ) );
+
+			pPlayer->SetClassNumber( random->RandomInt( 1, ClassManager()->m_iClassCount - 1 ) );
+
+			pPlayer->ForceRespawn();
+		}
     }
 }
 

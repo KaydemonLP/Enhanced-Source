@@ -68,8 +68,8 @@ private:
 
 	void OpenThirdPartySoundCreditsDialog();
 
-	static void AcceptLanguageChangeCallback();
-	static void CancelLanguageChangeCallback();
+	static void AcceptLanguageChangeCallback( void *var );
+	static void CancelLanguageChangeCallback( void *var );
 
 private:
 	CNB_Header_Footer *m_pHeaderFooter;

@@ -29,6 +29,9 @@ public:
 public:	
 // 	SHARED
 
+	// Misc
+	bool		bPlayable;	// Is this class selectable as a player?
+
 	// Localization and names
 	char		szClassName[MAX_WEAPON_STRING];
 	char		szLocalizedName[MAX_WEAPON_STRING];		// Name for showing in HUD, etc.
@@ -37,6 +40,9 @@ public:
 	char		szRightViewModel[MAX_WEAPON_STRING];	// View model of this weapon
 	char		szLeftViewModel[MAX_WEAPON_STRING];		// View model of this weapon
 	char		szPlayerModel[MAX_WEAPON_STRING];		// Model of this weapon seen carried by the player
+
+	// HUD Stuff
+	char		szClassImage[MAX_WEAPON_STRING];
 
 	// Particles and Cosmetic
 	float		flStepSpeed;

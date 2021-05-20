@@ -58,6 +58,14 @@ enum
 	OF_RELOAD_STAGE_END
 };
 
+enum
+{
+	OF_TEAM_UNASSIGNED,
+	OF_TEAM_FUNNY,
+	OF_TEAM_UNFUNNY,
+	OF_TEAM_COUNT
+};
+
 enum PlayerAnimEvent_t
 {
 	PLAYERANIMEVENT_FIRE_GUN_PRIMARY = 0,
@@ -65,12 +73,15 @@ enum PlayerAnimEvent_t
 	PLAYERANIMEVENT_THROW_GRENADE,
 	PLAYERANIMEVENT_JUMP,
 	PLAYERANIMEVENT_RELOAD,
+	PLAYERANIMEVENT_CUSTOM,
+	PLAYERANIMEVENT_CUSTOM_GESTURE,
 
 	PLAYERANIMEVENT_COUNT
 };
 
 extern const char *g_szProjectileTypes[];
 extern const char *g_szInputNames[];
+extern const char *g_szTeamNames[];
 extern const char *g_szAnimEventName[];
 
 //========================

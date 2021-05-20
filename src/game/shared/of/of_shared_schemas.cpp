@@ -111,7 +111,11 @@ void SetupBaseItemsGame()
 
 	}
 
-	pTempItemsGame->SaveToFile( filesystem, "scripts/items/items_game.txt", "MOD" );
+	// Always attempt this in case the directory doesn't exist
+	filesystem->CreateDirHierarchy("scripts/items/", "MOD");
+
+	if( !pTempItemsGame->SaveToFile( filesystem, "scripts/items/items_game.txt", "MOD" ) )
+		Error( "COULDN'T SETUP BASE ITEMS GAME!\nCheck if you have a scripts/items/ folder!" );
 
 	pTempItemsGame->deleteThis();
 }

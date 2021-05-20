@@ -15,6 +15,8 @@
 
 ClassInfo_t::ClassInfo_t()
 {
+	bPlayable = true;
+
 	szClassName[0] 		= '\0';
 	szLocalizedName[0] 	= '\0';
 
@@ -22,6 +24,8 @@ ClassInfo_t::ClassInfo_t()
 	szLeftViewModel[0] 	= '\0';
 
 	szPlayerModel[0] 	= '\0';
+
+	szClassImage[0]		= '\0';
 
 	flSpeed = 300.0f;
 	flEyeHeight = 72.0f;
@@ -37,6 +41,9 @@ ClassInfo_t::ClassInfo_t()
 
 void ClassInfo_t::Parse( KeyValues *pKeyValuesData )
 {
+	// Misc
+	bPlayable = pKeyValuesData->GetBool( "playable", true );
+
 	// Localization and names
 	Q_strncpy( szClassName, pKeyValuesData->GetString( "classname" ), MAX_WEAPON_STRING ); 
 	Q_strncpy( szLocalizedName, pKeyValuesData->GetString( "classname_localized" ), MAX_WEAPON_STRING );
@@ -48,6 +55,9 @@ void ClassInfo_t::Parse( KeyValues *pKeyValuesData )
 	
 	Q_strncpy( szPlayerModel, pKeyValuesData->GetString( "playermodel" ), MAX_WEAPON_STRING );
 	
+	// HUD Stuff
+	Q_strncpy( szClassImage, pKeyValuesData->GetString( "class_image" ), MAX_WEAPON_STRING );
+
 	// Particles and Cosmetic
 
 	flStepSpeed = pKeyValuesData->GetFloat("step_speed", 0.3f) * 1000;

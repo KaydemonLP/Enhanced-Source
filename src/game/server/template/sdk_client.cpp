@@ -15,6 +15,7 @@
 #include "player_resource.h"
 #include "engine/IEngineSound.h"
 #include "sdk_shareddefs.h"
+#include "of_campaign_system.h"
 #include "tier0/vprof.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -34,6 +35,17 @@ ClientPutInServer
 called each time a player is spawned into the game
 ============
 */
+
+void FinishClientPutInServer(CBasePlayer* pPlayer)
+{
+	Campaign()->RegisterPlayer(pPlayer->edict());
+	Campaign()->TransmitSessionToClients();
+}
+
+void ClientFullyConnect(edict_t *pEntity)
+{
+}
+
 void ClientPutInServer( edict_t *pEdict, const char *playername )
 {
 	// Allocate a CBasePlayer for pev, and call spawn
@@ -51,6 +63,8 @@ void ClientActive( edict_t *pEdict, bool bLoadGame )
 	{
 		return;
 	}
+
+	FinishClientPutInServer( pPlayer );
 
 	pPlayer->InitialSpawn();
 
@@ -153,14 +167,6 @@ void GameStartFrame( void )
 		return;
 
 	gpGlobals->teamplay = (teamplay.GetInt() != 0);
-}
-
-void FinishClientPutInServer( CBasePlayer* pPlayer )
-{
-}
-
-void ClientFullyConnect( edict_t *pEntity )
-{
 }
 
 //=========================================================

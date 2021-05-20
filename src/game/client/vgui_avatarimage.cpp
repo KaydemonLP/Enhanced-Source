@@ -106,7 +106,7 @@ void CAvatarImage::UpdateFriendStatus( void )
 
 	if ( steamapicontext->SteamFriends() && steamapicontext->SteamUtils() )
 	{
-		m_bFriend = steamapicontext->SteamFriends()->HasFriend( m_SteamID, k_EFriendFlagImmediate );
+		m_bFriend = m_iForceFriend > k_ForceFriend_OFF ? m_iForceFriend - 1 == k_ForceFriend_YES : steamapicontext->SteamFriends()->HasFriend(m_SteamID, k_EFriendFlagImmediate);
 		if ( m_bFriend && !m_pFriendIcon )
 		{
 			m_pFriendIcon = HudIcons().GetIcon( "ico_friend_indicator_avatar" );

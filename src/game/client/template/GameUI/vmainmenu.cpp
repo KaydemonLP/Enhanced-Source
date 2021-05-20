@@ -17,6 +17,7 @@
 //#include "UIGameData.h"
 //#include "VGameSettings.h"
 //#include "VSteamCloudConfirmation.h"
+#include "of_campaign_system.h"
 #include "vaddonassociation.h"
 
 //#include "VSignInDialog.h"
@@ -120,19 +121,20 @@ void MainMenu::OnCommand( const char *command )
 
 	if (!Q_strcmp(command, "SoloPlay"))
 	{
-		if(CheckSaveFile())
+		if(!CheckSaveFile())
 		{
 			GenericConfirmation* confirmation = 
 				static_cast< GenericConfirmation* >( CBaseModPanel::GetSingleton().OpenWindow( WT_GENERICCONFIRMATION, this, false ) );
 
 			GenericConfirmation::Data_t data;
 
-			data.pWindowTitle = "#Template_NewGame_Confirm";
-			data.pMessageText = "#Template_NewGame_ConfirmMsg";
+			data.pWindowTitle = "#OF_NewGame_Confirm";
+			data.pMessageText = "#OF_NewGame_ConfirmMsg";
 
 			data.bOkButtonEnabled = true;
 			data.pfnOkCallback = &AcceptNewGameCallback;
 			data.bCancelButtonEnabled = true;
+			data.bTextEntryEnabled = true;
 
 			confirmation->SetUsageData(data);
 
@@ -186,7 +188,25 @@ void MainMenu::OnCommand( const char *command )
 		CBaseModPanel::GetSingleton().OpenOptionsDialog( this );
 	}
 	*/
+	else if (!Q_strcmp(command, "ContinueGame"))
+	{
+		GenericConfirmation* confirmation = 
+			static_cast< GenericConfirmation* >( CBaseModPanel::GetSingleton().OpenWindow( WT_GENERICCONFIRMATION, this, false ) );
 
+		GenericConfirmation::Data_t data;
+
+		data.pWindowTitle = "#OF_Continue_Confirm";
+		data.pMessageText = "#OF_Continue_ConfirmMsg";
+
+		data.bOkButtonEnabled = true;
+		data.pfnOkCallback = &AcceptContinueGameCallback;
+		data.bCancelButtonEnabled = true;
+		data.bTextEntryEnabled = true;
+
+		confirmation->SetUsageData(data);
+
+		NavigateFrom();
+	}
 	else if (!Q_strcmp(command, "Audio"))
 	{
 		if ( ui_old_options_menu.GetBool() )
@@ -863,15 +883,49 @@ void MainMenu::Demo_DisableButtons( void )
 	}
 }
 
-void MainMenu::AcceptNewGameCallback()
+extern ConVar _active_campaign_name;
+extern ConVar _active_campaign_host;
+
+void MainMenu::AcceptNewGameCallback( void *var )
 {
+	char szCampaignName[128];
+	Q_strncpy(szCampaignName, (char*)var, sizeof(szCampaignName));
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
+		const char *szArgs[] = { szCampaignName };
+		CCommand args( 1, szArgs );
+		Campaign()->CreateSession( args, steamapicontext->SteamUser()->GetSteamID().GetAccountID() );
+		engine->ExecuteClientCmd( VarArgs("_active_campaign_name \"%s\"", args[0]) );
+		engine->ExecuteClientCmd( VarArgs("_active_campaign_host %u", steamapicontext->SteamUser()->GetSteamID().GetAccountID()) );
 		pMainMenu->OnCommand( "SoloPlay_NoConfirm" );
 	}
 }
 
-void MainMenu::AcceptCommentaryRulesCallback() 
+void MainMenu::AcceptContinueGameCallback( void *var )
+{
+	char szCampaignName[128];
+	Q_strncpy(szCampaignName, (char*)var, sizeof(szCampaignName));
+	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
+	{
+		const char *szArgs[] = { szCampaignName };
+		CCommand args( 1, szArgs );
+
+		engine->ExecuteClientCmd( VarArgs("_active_campaign_name \"%s\"", args[0]) );
+		engine->ExecuteClientCmd( VarArgs("_active_campaign_host %u", steamapicontext->SteamUser()->GetSteamID().GetAccountID()) );
+
+		KeyValues *pData = new KeyValues( "CampaignSession" );
+
+		if( !pData->LoadFromFile( filesystem, UTIL_VarArgs("saves/%s.txt", _active_campaign_name.GetString() ), "MOD" ) )
+			return;
+		
+		Campaign()->LoadSession(pData);
+
+		pData->deleteThis();
+		pMainMenu->OnCommand( "SoloPlay_NoConfirm" );
+	}
+}
+
+void MainMenu::AcceptCommentaryRulesCallback( void *var ) 
 {
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
@@ -897,7 +951,7 @@ void MainMenu::AcceptCommentaryRulesCallback()
 	}
 }
 
-void MainMenu::AcceptSplitscreenDisableCallback()
+void MainMenu::AcceptSplitscreenDisableCallback( void *var )
 {
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
@@ -905,7 +959,7 @@ void MainMenu::AcceptSplitscreenDisableCallback()
 	}
 }
 
-void MainMenu::AcceptQuitGameCallback()
+void MainMenu::AcceptQuitGameCallback( void *var )
 {
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
@@ -913,7 +967,7 @@ void MainMenu::AcceptQuitGameCallback()
 	}
 }
 
-void MainMenu::AcceptSaveOverCallback()
+void MainMenu::AcceptSaveOverCallback( void *var )
 {
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
@@ -921,7 +975,7 @@ void MainMenu::AcceptSaveOverCallback()
 	}
 }
 
-void MainMenu::AcceptLoadCallback()
+void MainMenu::AcceptLoadCallback( void *var )
 {
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
@@ -929,7 +983,7 @@ void MainMenu::AcceptLoadCallback()
 	}
 }
 
-void MainMenu::AcceptVersusSoftLockCallback()
+void MainMenu::AcceptVersusSoftLockCallback( void *var )
 {
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{

@@ -51,7 +51,7 @@ void SetFlyoutButtonText( const char *pchCommand, FlyoutMenu *pFlyout, const cha
 	}
 }
 
-void AcceptPagedPoolMemWarningCallback()
+void AcceptPagedPoolMemWarningCallback( void *var )
 {
 	Video *self = static_cast<Video*>( CBaseModPanel::GetSingleton().GetWindow( WT_VIDEO ) );
 	if( self )

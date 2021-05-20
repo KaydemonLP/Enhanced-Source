@@ -49,13 +49,14 @@ protected:
 	void	Demo_DisableButtons( void );
 
 private:
-	static void AcceptNewGameCallback();
-	static void AcceptSaveOverCallback();
-	static void AcceptLoadCallback();
-	static void AcceptCommentaryRulesCallback();
-	static void AcceptSplitscreenDisableCallback();
-	static void AcceptVersusSoftLockCallback();
-	static void AcceptQuitGameCallback();
+	static void AcceptNewGameCallback( void *var );
+	static void AcceptContinueGameCallback( void *var );
+	static void AcceptSaveOverCallback( void *var );
+	static void AcceptLoadCallback( void *var );
+	static void AcceptCommentaryRulesCallback( void *var );
+	static void AcceptSplitscreenDisableCallback( void *var );
+	static void AcceptVersusSoftLockCallback( void *var );
+	static void AcceptQuitGameCallback( void *var );
 
 	bool CheckSaveFile();
 	void SetFooterState();

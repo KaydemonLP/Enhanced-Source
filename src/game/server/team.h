@@ -14,6 +14,8 @@
 #include "shareddefs.h"
 #include "utlvector.h"
 
+extern bool InitTeams();
+
 class CBasePlayer;
 class CTeamSpawnPoint;
 

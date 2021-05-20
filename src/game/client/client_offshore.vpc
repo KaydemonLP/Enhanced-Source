@@ -17,7 +17,7 @@ $Configuration
 {
 	$Compiler
 	{
-		$AdditionalIncludeDirectories	"$BASE;.\hl2;.\of;.\template;.\template\vgui;.\gameui;$SRCDIR\game\client\template\gameui;..\statemachine;.\multiplayer;$SRCDIR/game/shared;$SRCDIR/game/shared/of;$SRCDIR/game/shared/of/weapons;$SRCDIR/game/shared/hl2;$SRCDIR/game/shared/multiplayer;$SRCDIR/game/shared/template"
+		$AdditionalIncludeDirectories	"$BASE;.\hl2;.\of;.\of\vgui;.\template;.\template\vgui;.\gameui;$SRCDIR\game\client\template\gameui;..\statemachine;.\multiplayer;$SRCDIR/game/shared;$SRCDIR/game/shared/of;$SRCDIR/game/shared/of/weapons;$SRCDIR/game/shared/hl2;$SRCDIR/game/shared/multiplayer;$SRCDIR/game/shared/template"
 		$PreprocessorDefinitions		"$BASE;SWARM_DLL;TEMPLATE_DLL;GAMEUI_EMBEDDED;GAMEUI_EXPORTS;OFFSHORE_DLL"
 	}
 }
@@ -27,7 +27,7 @@ $Project "Client (Offshore)"
 {
 	$Folder "Source Files"
 	{	
-		$Folder	"OF"
+		$Folder	"OFFSHORE"
 		{
 			$File	"of/c_te_firebullets.cpp"
 
@@ -35,6 +35,12 @@ $Project "Client (Offshore)"
 			{
 				$File	"of/of_hud_temp.cpp"
 				$File	"of/of_hud_temp.h"
+			}
+			
+			$Folder "VGUI"
+			{
+				$File	"of/vgui/of_lobby.cpp"
+				$File	"of/vgui/of_lobby.h"
 			}
 		}
 

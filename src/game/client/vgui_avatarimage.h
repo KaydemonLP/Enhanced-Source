@@ -28,6 +28,13 @@ enum EAvatarSize
 	k_EAvatarSize184x184
 };
 
+enum EForceFriend
+{
+	k_ForceFriend_OFF,
+	k_ForceFriend_NO,
+	k_ForceFriend_YES
+};
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -98,6 +105,7 @@ public:
 	virtual vgui::HTexture GetID() { return m_iTextureID; }
 	virtual void SetRotation( int iRotation ) { return; }
 	int		GetWide( void ) { return m_nWide; }
+	virtual void ForceFriend( EForceFriend iForceFriend ){ m_iForceFriend = iForceFriend;UpdateFriendStatus(); }
 
 protected:
 	void InitFromRGBA( const byte *rgba, int width, int height );
@@ -109,6 +117,7 @@ private:
 	int m_nX, m_nY, m_nWide, m_nTall;
 	bool m_bValid;
 	bool m_bFriend;
+	EForceFriend m_iForceFriend;
 	CHudTexture *m_pFriendIcon;
 	int	 m_iAvatarWidth;
 	int	 m_iAvatarHeight;
@@ -130,6 +139,8 @@ public:
 	void SetPlayer( C_BasePlayer *pPlayer );
 	void SetPlayerByIndex( int iIndex );
 	void SetAvatarBySteamID( CSteamID *friendsID );
+
+	virtual void ForceFriend( EForceFriend iForceFriend ){ if( IsValid() )((CAvatarImage*)GetImage())->ForceFriend(iForceFriend); }
 
 	virtual void PaintBackground( void );
 	bool	IsValid( void ) { return (GetImage() && ((CAvatarImage*)GetImage())->IsValid()); }

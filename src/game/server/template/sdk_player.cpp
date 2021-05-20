@@ -36,6 +36,7 @@
 #include "sdk_player_shared.h"
 #include "of_playeranimstate.h"
 #include "bone_setup.h" //animstate implementation
+#include "of_campaign_system.h"
 
 #include "bots\bot.h"
 
@@ -63,6 +64,7 @@ IMPLEMENT_SERVERCLASS_ST (CSDKPlayer, DT_SDKPlayer)
 	SendPropBool( SENDINFO( m_bPlayerPickedUpObject ) ),
 	SendPropInt( SENDINFO( m_iShotsFired ), 8, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_iClassNumber ) ),
+	SendPropBool( SENDINFO( m_bReady ) ),
 	SendPropDataTable( SENDINFO_DT( m_PlayerShared ), &REFERENCE_SEND_TABLE( DT_SDKPlayerShared ) ),
 	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 0 ), 11, SPROP_CHANGES_OFTEN ),
 	SendPropAngle( SENDINFO_VECTORELEM( m_angEyeAngles, 1 ), 11, SPROP_CHANGES_OFTEN ),
@@ -171,6 +173,7 @@ CSDKPlayer::CSDKPlayer()
 	// We did not fire any shots.
 	m_iShotsFired = 0;
 	m_iClassNumber = 0;
+	m_bReady = false;
 	
 	m_PlayerShared.m_pOuter = this;
 	m_hWeaponSlots.SetLessFunc( BucketSlotCompare );
@@ -203,21 +206,24 @@ void CSDKPlayer::Precache( void )
 void CSDKPlayer::InitialSpawn( void )
 {
 	BaseClass::InitialSpawn();
-
+	/*
 	const ConVar *hostname = cvar->FindVar( "hostname" );
 	const char *title = (hostname) ? hostname->GetString() : "MESSAGE OF THE DAY";
 
 	// open info panel on client showing MOTD:
+	
 	KeyValues *data = new KeyValues("data");
 	data->SetString( "title", title );		// info panel title
 	data->SetString( "type", "1" );			// show userdata from stringtable entry
 	data->SetString( "msg",	"motd" );		// use this stringtable entry
 	data->SetInt( "cmd", TEXTWINDOW_CMD_IMPULSE101 );// exec this command if panel closed
 	data->SetBool( "unload", sv_motd_unload_on_dismissal.GetBool() );
+	*/
+	ShowViewPortPanel( PANEL_LOBBY, true );
+	StartObserverMode( OBS_MODE_ROAMING );
+	ChangeTeam( OF_TEAM_UNASSIGNED );
 
-	ShowViewPortPanel( PANEL_INFO, true, data );
-
-	data->deleteThis();
+	//data->deleteThis();
 
 	m_bWelcome = true;
 }
@@ -236,20 +242,39 @@ void CSDKPlayer::Spawn()
 
 	if( m_bWelcome )
 	{
+		StartObserverMode( OBS_MODE_ROAMING );
 		m_bWelcome = false;
 	}
+	else
+	{
+		StopObserverMode();
 
+		// Setup flags
+		m_takedamage = DAMAGE_YES;
+		m_lifeState = LIFE_ALIVE; // Can't be dead, otherwise movement doesn't work right.
+		m_flDeathAnimTime = gpGlobals->curtime;
+		pl.deadflag = false;
+
+		SetMoveType( MOVETYPE_WALK );
+		RemoveEffects( EF_NODRAW | EF_NOSHADOW );
+		RemoveSolidFlags( FSOLID_NOT_SOLID );
+
+		SetModel( GetClass(this).szPlayerModel );
+	}
 	//////////////////////////////////
 	// Set stuff after this comment
 	//////////////////////////////////
+
+	if( !IsFakeClient() )
+		ChangeTeam( OF_TEAM_FUNNY );
+	else
+		ChangeTeam( OF_TEAM_UNFUNNY );
 
 	// Set health
 	m_iMaxHealth = GetClass(this).iMaxHealth;
 	m_iHealth = m_iMaxHealth;
 
-	SetMoveType( MOVETYPE_WALK );
-	RemoveEffects( EF_NODRAW | EF_NOSHADOW );
-	RemoveSolidFlags( FSOLID_NOT_SOLID );
+
 	m_Local.m_iHideHUD = 0;
 	
 	IPhysicsObject *pObj = VPhysicsGetObject();
@@ -273,6 +298,19 @@ void CSDKPlayer::Spawn()
 	{
 		GetBotController()->Spawn();
 	}
+}
+
+void CSDKPlayer::ForceRespawn()
+{
+	RemoveAllItems( true );
+
+	// Reset ground state for airwalk animations
+	SetGroundEntity( NULL );
+
+	// Stop any firing that was taking place before respawn.
+	m_nButtons = 0;
+	
+	Spawn();
 }
 
 //------------------------------------------------------------------------------
@@ -1199,6 +1237,15 @@ void CSDKPlayer::GiveAllItems( void )
 	GiveNamedItem("weapon_crossbow");
 }
 
+void CSDKPlayer::ClearAllWeapons( void )
+{
+	for( int i = 0; i < m_hMyWeapons.Count(); i++ )
+	{
+		Weapon_Detach( m_hMyWeapons[i] );
+		UTIL_Remove( m_hMyWeapons[i] );
+	}
+}
+
 void CSDKPlayer::GiveDefaultItems( void )
 {
 	// If you want the player to always start with something, give it
@@ -1343,15 +1390,52 @@ bool CSDKPlayer::ClientCommand(const CCommand &args)
 		if( iDesiredClass >= ClassManager()->m_iClassCount || iDesiredClass == m_iClassNumber )
 			return false;
 
-		m_iClassNumber = iDesiredClass;
+		if( !ClassManager()->m_hClassInfo[iDesiredClass].bPlayable )
+			return false;
 
-		CommitSuicide();
+		m_iClassNumber = iDesiredClass;
+		
+		session_player_data_t *pPlayerData = Campaign()->GetSessionPlayerData( GetSteamID() );
+		if( pPlayerData )
+			Q_strncpy( pPlayerData->m_szClass, GetClass(this).szClassName, sizeof(pPlayerData->m_szClass) );
+		// ForceRespawn();
 
 		return true;
 	}
 	else if( FStrEq( cmd, "get_class_info" ) )
 	{
 		DevMsg( "%s\n", GetClass(this).szClassName );
+		return true;
+	}
+	else if( FStrEq( cmd, "request_ready" ) )
+	{
+		m_bReady = true;
+		return true;
+	}
+	else if( FStrEq( cmd, "request_unready" ) )
+	{
+		m_bReady = false;
+		return true;
+	}
+	else if( FStrEq( cmd, "request_nextmap" ) )
+	{
+		if( !OFGameRules()->RoundEnded() && !OFGameRules()->IsLobby() )
+			return false;
+
+		if( args.ArgC() < 2 )
+			return false;
+
+		int iMap = atoi(args[1]);
+
+		if( iMap >= OFGameRules()->m_hNextMaps.Count() )
+			return false;
+
+		if( Campaign()->m_pActiveSession->m_iHost == GetSteamID() )
+		{
+			ConVarRef nextlevel( "nextlevel" );
+			nextlevel.SetValue( OFGameRules()->m_hNextMaps[iMap].szMapname );
+			engine->ServerCommand(UTIL_VarArgs("say \"Next Map:%s\"", OFGameRules()->m_hNextMaps[iMap].szMapname));
+		}
 		return true;
 	}
 	else

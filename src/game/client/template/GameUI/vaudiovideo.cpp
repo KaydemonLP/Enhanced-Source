@@ -543,7 +543,7 @@ void AudioVideo::ResetLanguage()
 	}
 }
 
-void AudioVideo::AcceptLanguageChangeCallback() 
+void AudioVideo::AcceptLanguageChangeCallback( void *var ) 
 {
 	AudioVideo *self = static_cast< AudioVideo * >( CBaseModPanel::GetSingleton().GetWindow( WT_AUDIOVIDEO ) );
 	if( self )
@@ -553,7 +553,7 @@ void AudioVideo::AcceptLanguageChangeCallback()
 }
 
 //=============================================================================
-void AudioVideo::CancelLanguageChangeCallback()
+void AudioVideo::CancelLanguageChangeCallback( void *var )
 {
 	AudioVideo *self = static_cast< AudioVideo * >( CBaseModPanel::GetSingleton().GetWindow( WT_AUDIOVIDEO ) );
 	if( self )

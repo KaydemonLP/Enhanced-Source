@@ -218,12 +218,14 @@ public:
 	virtual void Precache();
 	virtual void InitialSpawn();
 	virtual void Spawn();
+	virtual void ForceRespawn();
 	virtual void UpdateClientData( void );
 	virtual void PostThink();
 	virtual void PreThink();
 	virtual void Splash( void );
 	CLogicPlayerProxy	*GetPlayerProxy( void );
 
+	virtual void SetClassNumber( int iClassNumber ) { m_iClassNumber = iClassNumber; }
 	virtual int GetClassNumber() { return m_iClassNumber; }
 	
 	//==============
@@ -337,6 +339,7 @@ public:
 	// CHEAT
 	virtual void			CheatImpulseCommands( int iImpulse );
 	virtual void			GiveAllItems( void );
+	virtual void			ClearAllWeapons( void );
 	virtual void			GiveDefaultItems( void );
 	virtual CBaseEntity		*GiveNamedItem( const char *szName, int iSubType = 0, bool removeIfNotCarried = true );
 
@@ -362,8 +365,13 @@ public:
 
 	Class_T Classify ( void );
 
+	// Campaign Stuff
+	bool IsReady(){ return m_bReady; }
+	void UnReady(){ m_bReady = false; }
+
 	// Shared Functions
 	virtual const QAngle &EyeAngles(); 
+	virtual uint32 GetSteamID( void );
 
 public:
 	// ISDKPlayerAnimState overrides.
@@ -394,6 +402,7 @@ private:
 		bool				m_bWelcome;
 
 		CNetworkVar( int, m_iClassNumber );
+		CNetworkVar( bool, m_bReady );
 		
 		CNetworkQAngle( m_angEyeAngles );
 		

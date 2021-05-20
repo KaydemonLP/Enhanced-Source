@@ -58,7 +58,7 @@ void CBotManager::LevelInitPostEntity()
 //================================================================================
 void CBotManager::LevelShutdownPreEntity()
 {
-#ifdef INSOURCE_DLL
+#if defined( INSOURCE_DLL ) || defined( OFFSHORE_DLL )
     for ( int it = 0; it <= gpGlobals->maxClients; ++it ) {
         CPlayer *pPlayer = ToInPlayer( UTIL_PlayerByIndex( it ) );
 
@@ -67,8 +67,11 @@ void CBotManager::LevelShutdownPreEntity()
 
         if ( !pPlayer->IsBot() )
             continue;
-
+#ifdef INSOURCE_DLL
         pPlayer->Kick();
+#else
+		pPlayer->GetBotController()->Kick();
+#endif
     }
 
     engine->ServerExecute();
@@ -79,7 +82,8 @@ void CBotManager::LevelShutdownPreEntity()
 //================================================================================
 void CBotManager::FrameUpdatePreEntityThink()
 {
-#ifdef INSOURCE_DLL
+// This is literally the entire bot system  think, why is it disabled by default?
+#if defined( INSOURCE_DLL ) || defined( OFFSHORE_DLL )
     Bot_RunAll();
 #endif
 }

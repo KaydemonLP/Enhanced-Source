@@ -53,7 +53,7 @@ BaseClass( parent, panelName, false, true )
 }
 
 //=============================================================================
-static void LeaveGameOkCallback()
+static void LeaveGameOkCallback( void *var )
 {
 	COM_TimestampedLog( "Exit Game" );
 
@@ -89,7 +89,7 @@ static void LeaveGameOkCallback()
 	CBaseModPanel::GetSingleton().OpenFrontScreen();
 }
 
-static void LoadGameCallback()
+static void LoadGameCallback( void *var )
 {
 	InGameMainMenu* self = 
 		static_cast< InGameMainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_INGAMEMAINMENU ) );
@@ -106,7 +106,7 @@ static void LoadGameCallback()
 	CBaseModPanel::GetSingleton().OnGameUIHidden();
 }
 
-static void SavedGameCallback()
+static void SavedGameCallback( void *var )
 {
 	InGameMainMenu* self = 
 		static_cast< InGameMainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_INGAMEMAINMENU ) );

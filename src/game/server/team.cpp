@@ -340,3 +340,35 @@ void CTeam::AwardAchievement( int iAchievement )
 		WRITE_SHORT( iAchievement );
 	MessageEnd();
 }
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+bool InitTeams()
+{
+	// Clear the list.
+	g_Teams.Purge();
+
+	// Create the team list.
+	for ( int iTeam = 0; iTeam < OF_TEAM_COUNT; ++iTeam )
+	{
+		int index = -1;
+		CTeam *pTeam = static_cast<CTeam*>( CreateEntityByName( "team_manager" ) );
+		if ( pTeam )
+		{
+			// Add the team to the global list of teams.
+			int iTeam = g_Teams.AddToTail( pTeam );
+
+			// Initialize the team.
+			pTeam->Init( g_szTeamNames[iTeam], iTeam );
+			pTeam->NetworkProp()->SetUpdateInterval( 0.75f );
+
+			index = iTeam;
+		}
+		Assert( index == iTeam );
+		if ( index != iTeam )
+			return false;
+	}
+
+	return true;
+}

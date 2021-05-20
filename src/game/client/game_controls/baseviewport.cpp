@@ -41,6 +41,9 @@
 #include "hud.h"
 #include "NavProgress.h"
 #include "commentary_modelviewer.h"
+#ifdef OFFSHORE_DLL
+#include "of_lobby.h"
+#endif
 
 // our definition
 #include "baseviewport.h"
@@ -221,13 +224,12 @@ void CBaseViewport::OnScreenSizeChanged(int iOldWide, int iOldTall)
 
 void CBaseViewport::CreateDefaultPanels( void )
 {
-
-
 	AddNewPanel( CreatePanelByName( PANEL_SCOREBOARD ), "PANEL_SCOREBOARD" );
 	AddNewPanel( CreatePanelByName( PANEL_INFO ), "PANEL_INFO" );
 	AddNewPanel( CreatePanelByName( PANEL_SPECGUI ), "PANEL_SPECGUI" );
 	AddNewPanel( CreatePanelByName( PANEL_SPECMENU ), "PANEL_SPECMENU" );
 	AddNewPanel( CreatePanelByName( PANEL_NAV_PROGRESS ), "PANEL_NAV_PROGRESS" );
+	AddNewPanel( CreatePanelByName( PANEL_LOBBY ), "PANEL_LOBBY" );
 }
 
 void CBaseViewport::UpdateAllPanels( void )
@@ -280,7 +282,10 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 	{
 		newpanel = new CNavProgress( this );
 	}
-
+	else if ( Q_strcmp(PANEL_LOBBY, szPanelName) == 0 )
+	{
+		newpanel = new COFLobby( this );
+	}
 
 #endif // !XBOX
 

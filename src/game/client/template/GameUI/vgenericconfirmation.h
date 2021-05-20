@@ -26,13 +26,15 @@ public:
 	// 
 	// Public types
 	//
-	typedef void (*Callback_t)(void);
+	typedef void (*Callback_t)(void *var);
 
 	struct Data_t
 	{
 		const char* pWindowTitle;
 		const char* pMessageText;
 		const wchar_t* pMessageTextW;
+
+		bool		bTextEntryEnabled;
 		
 		bool        bOkButtonEnabled;
 		Callback_t	pfnOkCallback;
@@ -71,6 +73,7 @@ protected:
 	vgui::Label *m_pLblCancelButton;
 	vgui::Label *m_pLblCancelText;
 	vgui::Panel *m_pPnlLowerGarnish;
+	vgui::TextEntry *m_pTextEntry;
 	vgui::CvarToggleCheckButton<CGameUIConVarRef> *m_pCheckBox;
 
 	CNB_Button* m_pBtnOK;

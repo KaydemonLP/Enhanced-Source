@@ -33,7 +33,9 @@ $Project
 				}
 
 				$File	"$SHARED\of\of_baseschemaitem.cpp"
-				$File	"$SHARED\of\of_baseschemaitem.h"					
+				$File	"$SHARED\of\of_baseschemaitem.h"	
+				$File	"$SHARED\of\of_campaign_system.cpp"
+				$File	"$SHARED\of\of_campaign_system.h"
 				$File	"$SHARED\of\of_class_parse.cpp"
 				$File	"$SHARED\of\of_class_parse.h"	
 				$File	"$SHARED\of\of_fx_shared.cpp"

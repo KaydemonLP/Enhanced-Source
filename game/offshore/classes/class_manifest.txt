@@ -1,5 +1,10 @@
 "ClassFiles"
 {
-	"File"		"classes/surplex.txt"
+// FIRST CLASS IS ALWAYS USED AS UNDEFINED!!!!
+	"File"		"classes/undefined.txt"
+	
+//	Regular classes
 	"File"		"classes/quaker.txt"
+	"File"		"classes/suplex.txt"
+	"File"		"classes/summoner.txt"
 }

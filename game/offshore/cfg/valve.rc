@@ -7,7 +7,7 @@ exec joystick.cfg
 // run a user script file if present
 exec autoexec.cfg
 
-maxplayers 8
+maxplayers 32
 
 //
 // stuff command line statements

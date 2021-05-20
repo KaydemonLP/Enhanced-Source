@@ -10,6 +10,8 @@
 #include "c_te_effect_dispatch.h"
 #include "c_basetempentity.h"
 #endif
+#include "cdll_int.h"
+#include "steam/steam_api.h"
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -343,6 +345,20 @@ const QAngle &CSDKPlayer::EyeAngles(void)
 	return BaseClass::EyeAngles();
 }
 
+uint32 CSDKPlayer::GetSteamID( void )
+{
+	player_info_t pi;
+	if( engine->GetPlayerInfo( entindex(), &pi ) )
+	{
+		if ( pi.friendsID != 0 	&& steamapicontext->SteamUtils() )
+		{		
+			CSteamID steamIDForPlayer( pi.friendsID, 1, steamapicontext->SteamUtils()->GetConnectedUniverse(), k_EAccountTypeIndividual );
+			return steamIDForPlayer.GetAccountID();
+		}
+	}
+
+	return 0;
+}
 CBaseSDKCombatWeapon* CSDKPlayer::SDKAnim_GetActiveWeapon()
 {
 	return GetActiveSDKWeapon();
