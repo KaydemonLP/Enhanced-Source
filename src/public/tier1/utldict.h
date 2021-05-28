@@ -93,6 +93,37 @@ protected:
 	DictElementMap_t m_Elements;
 };
 
+//-----------------------------------------------------------------------------
+// The CCopyableUtlDict class:
+// A dictionary class that allows copy construction (so you can nest a CUtlDict inside of another one of our containers)
+//  WARNING - this class lets you copy construct which can be an expensive operation if you don't carefully control when it happens
+// Only use this when nesting a CUtlDict() inside of another one of our container classes (i.e a CUtlMap)
+//-----------------------------------------------------------------------------
+template <class T, class I = int >
+class CCopyableUtlDict : public CUtlDict< T, I >
+{
+	typedef CUtlDict< T, I > BaseClass;
+public:
+	CCopyableUtlDict( int compareType = k_eDictCompareTypeCaseInsensitive, int growSize = 0, int initSize = 0 ) : BaseClass( compareType, growSize, initSize ) {}
+	virtual ~CCopyableUtlDict() {}
+	CCopyableUtlDict( CCopyableUtlDict const& other ) 
+	{ 
+		(*this) = other;
+	}
+
+	// Copy the array.
+	CCopyableUtlDict<T, I>& operator=(const CCopyableUtlDict<T, I> &other)
+	{ 
+		(*this).RemoveAll();
+
+		for( I i = other.First(); i != other.InvalidIndex(); i = other.Next(i) )
+		{
+			(*this).Insert( other.GetElementName( i ), other.Element(i) );
+		}
+
+		return *this;
+	};
+};
 
 //-----------------------------------------------------------------------------
 // constructor, destructor

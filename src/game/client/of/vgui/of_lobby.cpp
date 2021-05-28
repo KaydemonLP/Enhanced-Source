@@ -74,6 +74,45 @@ void COFLobbyPlayerStatus::SetPlayer( C_SDKPlayer *pPlayer )
 	m_pNameLabel->SetText( pPlayer->GetPlayerName() );
 }
 
+COFLobbyClassChoice::COFLobbyClassChoice( Panel *parent, const char *name ) : BaseClass( parent, name )
+{
+	// Skip the Undefined class
+	for( int i = 1; i < ClassManager()->m_iClassCount; i++ )
+	{
+		RadioButton *pClassButton = new RadioButton( this, ClassManager()->m_hClassInfo[i].szClassName, ClassManager()->m_hClassInfo[i].szLocalizedName );
+		m_pClasses.AddToTail( pClassButton );
+	}
+}
+
+void COFLobbyClassChoice::ApplySchemeSettings( IScheme *pScheme )
+{
+	BaseClass::ApplySchemeSettings( pScheme );
+
+	if( C_SDKPlayer::GetLocalSDKPlayer() && C_SDKPlayer::GetLocalSDKPlayer()->GetClassNumber() != 0 )
+		m_pClasses[C_SDKPlayer::GetLocalSDKPlayer()->GetClassNumber()-1]->SetSelected(true);
+}
+
+void COFLobbyClassChoice::OnRadioButtonChecked( Panel *panel )
+{
+	RadioButton *pButton = (RadioButton*) panel;
+	
+	if( FStrEq( pButton->GetCommand()->GetName(), "Command" ) )
+		OnCommand( pButton->GetCommand()->GetString( "command", "" ) );
+}
+
+void COFLobbyClassChoice::OnCommand( const char *command )
+{
+	if( !Q_strncmp(command, "joinclass", 9) )
+	{
+		CCommand args;
+		args.Tokenize(command);
+		if (args.ArgC() < 2)
+			return;
+
+		engine->ClientCmd(VarArgs("%s %s", args[0], args[1]));
+	}
+}
+
 COFLobbyMapChoice::COFLobbyMapChoice( Panel *parent, const char *name ) : BaseClass( parent, name )
 {
 	for( int i = 0; i < 3; i++ )
@@ -97,7 +136,7 @@ void COFLobbyMapChoice::OnRadioButtonChecked( Panel *panel )
 	RadioButton *pButton = (RadioButton*) panel;
 	
 	if( FStrEq( pButton->GetCommand()->GetName(), "Command" ) )
-		OnCommand( pButton->GetCommand()->GetString("command", "" ) );
+		OnCommand( pButton->GetCommand()->GetString( "command", "" ) );
 }
 
 void COFLobbyMapChoice::OnCommand( const char *command )
@@ -143,6 +182,7 @@ COFLobby::COFLobby( IViewPort *pViewPort ) : BaseClass( NULL, PANEL_LOBBY )
 	SetTitleBarVisible( false );
 
 	m_pPlayerStatus = new COFLobbyPlayerStatus( this, "test" );
+	m_pClassChoice = new COFLobbyClassChoice( this, "floppas_choice" );
 	m_pMapChoice = new COFLobbyMapChoice( this, "scrungos_choice" );
 
 	ListenForGameEvent( "round_win" );
@@ -155,18 +195,9 @@ COFLobby::~COFLobby()
 
 void COFLobby::Reset( void )
 {
-	for( int i = 0; i < GetChildCount(); i++ )
-	{
-		RadioButton *pButton = dynamic_cast<RadioButton*>(GetChild(i));
-		if( pButton )
-		{
-			CCommand args;
-			args.Tokenize(pButton->GetCommand()->GetString("command"));
-			pButton->SetSelected( args.ArgC() == 2 && C_SDKPlayer::GetLocalSDKPlayer() && atoi(args[1]) == C_SDKPlayer::GetLocalSDKPlayer()->GetClassNumber() );
-		}
-	}
+	m_pClassChoice->InvalidateLayout( true, true );
 
-	if( OFGameRules() && (OFGameRules()->m_bRoundEnded || OFGameRules()->IsLobby()) )
+	if( OFGameRules() && ( OFGameRules()->m_bRoundEnded || OFGameRules()->IsLobby() ) )
 	{
 		m_pMapChoice->SetVisible( true );
 
@@ -284,20 +315,11 @@ void COFLobby::OnRadioButtonChecked( Panel *panel )
 //-----------------------------------------------------------------------------
 void COFLobby::OnCommand( const char *command )
 {
-	if ( !Q_strncmp( command, "joinclass", 9 ) )
-	{
-		CCommand args;
-		args.Tokenize( command );
-		if( args.ArgC() < 2 )
-			return;
-
-		engine->ClientCmd( VarArgs("%s %s", args[0], args[1]) );
-	}
 //	else if( !Q_strcmp( command, "okay" ) )
 //	{
 //		m_pViewPort->ShowPanel( this, false );
 //	}
-	else if( !Q_strcmp( command, "ready" ) )
+	if( !Q_strcmp( command, "ready" ) )
 	{
 		engine->ClientCmd( "request_ready" );
 	}

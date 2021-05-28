@@ -43,6 +43,29 @@ BEGIN_NETWORK_TABLE_NOBASE( COFCampaignSystem, DT_CampaignSystem )
 
 END_NETWORK_TABLE()
 
+extern void CampaignDevMsg();
+
+inline char *GetCampaignFileLocation( bool bHost = false )
+{
+#ifdef GAME_DLL
+	return UTIL_VarArgs( "saves/%s.txt", _active_campaign_name.GetString() );
+#else
+	// Outside Client Pulls from saves_external so campaign don't clash
+	// TODO: Dedicated servers are set to have the hostID 0, so they will all get pulled onto that
+	// Maybe use the server IP for that instead? - Kay
+	if( bHost )
+		return UTIL_VarArgs( "saves/%s.txt", _active_campaign_name.GetString() );
+	else
+		return UTIL_VarArgs( "saves_external/%s/%s.txt", _active_campaign_host.GetString(), _active_campaign_name.GetString() );
+#endif
+}
+
+#ifdef CLIENT_DLL
+inline bool LocalPlayerIsHost()
+{
+	return steamapicontext->SteamUser()->GetSteamID().GetAccountID() == Q_atoui64(_active_campaign_host.GetString());
+}
+#endif
 //-----------------------------------------------------------------------------
 // Purpose: constructor
 //-----------------------------------------------------------------------------
@@ -74,8 +97,12 @@ void COFCampaignSystem::LevelInitPostEntity( void )
 	if( !m_pActiveSession )
 	{
 		KeyValues *pData = new KeyValues( "CampaignSession" );
-
-		if( pData->LoadFromFile( filesystem, UTIL_VarArgs("saves/%s.txt", _active_campaign_name.GetString() )), "MOD" )
+#ifdef CLIENT_DLL
+		if( pData->LoadFromFile(filesystem, GetCampaignFileLocation( LocalPlayerIsHost() ), "MOD") )
+#else
+		if( pData->LoadFromFile(filesystem, GetCampaignFileLocation(), "MOD") )
+#endif
+		
 			LoadSession( pData );
 
 		pData->deleteThis();
@@ -88,17 +115,25 @@ void COFCampaignSystem::LevelInitPostEntity( void )
 		OFGameRules()->SetupNextMaps();
 #else
 	// Host doesn't save session clientside
-	if( steamapicontext->SteamUser()->GetSteamID().GetAccountID() != Q_atoui64( _active_campaign_host.GetString() ) )
+	if( !LocalPlayerIsHost() )
 		SaveSession();
 #endif
 }
 
 void COFCampaignSystem::LevelShutdownPreEntity( void )
 {
+#ifdef GAME_DLL
+	TransmitSessionToClients();
+#endif
+	ConVarRef nextlevel("nextlevel");
+	char szNextLevel[128];
+	Q_strncpy( szNextLevel, nextlevel.GetString(), sizeof(szNextLevel) );
 	// If we played a map and exited the game, save
-	if( m_hSession.m_hMapHistory.Count() 
-		&& ( !OFGameRules() 
-		|| ( OFGameRules() && !OFGameRules()->IsLobby() )))
+	if( m_pActiveSession && szNextLevel[0] != '\0'
+#ifdef CLIENT_DLL
+		&& !LocalPlayerIsHost()
+#endif
+		)
 		SaveSession();
 
 	ClearSession();
@@ -126,7 +161,7 @@ bool COFCampaignSystem::CreateSession( CCommand args, uint64 iSteamID )
 	m_hSession.m_iSeed = random->RandomInt( 0, INT_MAX );
 
 	m_pActiveSession = &m_hSession;
-	SaveSession();
+	SaveSession(true);
 
 	return true;
 }
@@ -151,7 +186,8 @@ bool COFCampaignSystem::LoadSession( KeyValues *kvSessionData )
 		FOR_EACH_SUBKEY( kvPlayers, kvPlayer )
 		{
 			session_player_data_t hPlayer;
-			Q_strncpy( hPlayer.m_szClass, kvSessionData->GetString( "Class", "" ), sizeof(hPlayer.m_szClass) );
+			hPlayer.m_iSteamID = Q_atoi64(kvPlayer->GetName());
+			Q_strncpy( hPlayer.m_szClass, kvPlayer->GetString( "Class", "" ), sizeof(hPlayer.m_szClass) );
 
 			KeyValues *kvSkillSet = kvPlayer->FindKey( "SkillSet" );
 			if( kvSkillSet )
@@ -162,7 +198,7 @@ bool COFCampaignSystem::LoadSession( KeyValues *kvSessionData )
 				}
 			}
 
-			m_hSession.m_hPlayerData.Insert( Q_atoi64(kvPlayers->GetName()), hPlayer );
+			m_hSession.m_hPlayerData.InsertOrReplace( hPlayer.m_iSteamID, hPlayer );
 		}
 	}
 
@@ -172,6 +208,7 @@ bool COFCampaignSystem::LoadSession( KeyValues *kvSessionData )
 		FOR_EACH_SUBKEY( kvMapHistory, kvMap )
 		{
 			session_map_history_t hMap;
+			hMap.m_iOrder = (uint32)Q_atoui64(kvMap->GetName());
 			FOR_EACH_VALUE( kvMap, kvValue )
 			{
 				if( FStrEq( kvValue->GetName(), "name" ) )
@@ -181,7 +218,7 @@ bool COFCampaignSystem::LoadSession( KeyValues *kvSessionData )
 					hMap.m_hMapData.Insert(kvValue->GetName(), kvValue->GetString());
 				}
 			}
-			m_hSession.m_hMapHistory.Insert( Q_atoui64( kvMap->GetName() ), hMap );
+			m_hSession.m_hMapHistory.Insert( hMap.m_iOrder, hMap );
 		}
 	}
 
@@ -190,7 +227,7 @@ bool COFCampaignSystem::LoadSession( KeyValues *kvSessionData )
 	return true;
 }
 
-bool COFCampaignSystem::SaveSession( void )
+bool COFCampaignSystem::SaveSession( bool bHost )
 {
 	KeyValues *kvSession = new KeyValues("CampaignSession");
 	kvSession->SetString("Name", m_hSession.m_szName);
@@ -205,7 +242,7 @@ bool COFCampaignSystem::SaveSession( void )
 	KeyValues *kvPlayers = new KeyValues( "Players" );
 	for( unsigned int i = 0;  i < m_hSession.m_hPlayerData.Count(); i++ )
 	{
-		KeyValues *kvPlayer = new KeyValues(UTIL_VarArgs("%d", m_hSession.m_hPlayerData[i].m_iSteamID));
+		KeyValues *kvPlayer = new KeyValues(UTIL_VarArgs("%u", m_hSession.m_hPlayerData[i].m_iSteamID));
 		kvPlayer->SetString( "Class", m_hSession.m_hPlayerData[i].m_szClass );
 		KeyValues *kvSkillSet = new KeyValues( "SkillSet" );
 		for( unsigned int y = 0;  y < m_hSession.m_hPlayerData[i].m_hSkills.Count(); y++ )
@@ -220,7 +257,7 @@ bool COFCampaignSystem::SaveSession( void )
 	KeyValues *kvMapHistory = new KeyValues( "MapHistory" );
 	for( unsigned int i = 0;  i < m_hSession.m_hMapHistory.Count(); i++ )
 	{
-		KeyValues *kvMap = new KeyValues( UTIL_VarArgs("%d", m_hSession.m_hMapHistory[i].m_iOrder) );
+		KeyValues *kvMap = new KeyValues( UTIL_VarArgs("%u", m_hSession.m_hMapHistory[i].m_iOrder) );
 		kvMap->SetString( "Name", m_hSession.m_hMapHistory[i].m_szName );
 		for( unsigned int y = 0;  y < m_hSession.m_hMapHistory[i].m_hMapData.Count(); y++ )
 		{
@@ -231,9 +268,15 @@ bool COFCampaignSystem::SaveSession( void )
 	kvSession->AddSubKey( kvMapHistory );
 
 	// Always attempt this in case the directory doesn't exist
-	filesystem->CreateDirHierarchy("saves/", "MOD");
-
-	bool bSuccess = kvSession->SaveToFile(filesystem, UTIL_VarArgs("saves/%s.txt", m_hSession.m_szName), "MOD");
+#ifdef GAME_DLL
+	filesystem->CreateDirHierarchy( "saves/", "MOD" );
+#else
+	if( bHost )
+		filesystem->CreateDirHierarchy("saves/", "MOD");
+	else
+		filesystem->CreateDirHierarchy( UTIL_VarArgs("saves_external/%s/", _active_campaign_host.GetString() ), "MOD" );
+#endif
+	bool bSuccess = kvSession->SaveToFile(filesystem, GetCampaignFileLocation(bHost), "MOD");
 
 	kvSession->deleteThis();
 
@@ -242,10 +285,11 @@ bool COFCampaignSystem::SaveSession( void )
 
 session_player_data_t *COFCampaignSystem::GetSessionPlayerData( uint32 iSteamID )
 {
-	if( m_hSession.m_hPlayerData.Find(iSteamID) == m_hSession.m_hPlayerData.InvalidIndex() )
+	int iIndex = m_hSession.m_hPlayerData.Find(iSteamID);
+	if( iIndex == m_hSession.m_hPlayerData.InvalidIndex() )
 		return NULL;
 
-	return &m_hSession.m_hPlayerData.Element(iSteamID);
+	return &m_hSession.m_hPlayerData[iIndex];
 }
 
 session_map_history_t *COFCampaignSystem::GetSessionMapData( uint32 iOrder )
@@ -332,6 +376,8 @@ void COFCampaignSystem::TransmitSessionToClients( void )
 
 		event->SetUint64( "host", m_hSession.m_iHost );
 
+		event->SetBool( "clear", true );
+
 		gameeventmanager->FireEvent( event );
 	}
 
@@ -415,6 +461,12 @@ void COFCampaignSystem::FireGameEvent( IGameEvent *event )
 		m_hSession.m_iStage = event->GetInt("stage");
 
 		m_hSession.m_iHost = event->GetUint64("host");
+
+		if( event->GetBool("clear") )
+		{
+			m_hSession.m_hMapHistory.Purge();
+			m_hSession.m_hPlayerData.Purge();
+		}
 	}
 	else if( FStrEq( szName, "session_player_data" ) )
 	{
@@ -472,23 +524,120 @@ void COFCampaignSystem::NetworkStateChanged( void *pVar )
 }
 
 #ifdef GAME_DLL
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-CON_COMMAND( campaign_test, "" )
+CON_COMMAND( start_campaign, "" )
 {
-	DevMsg("Count: %u\n", Campaign()->m_hSession.m_hPlayerData.Count());
-	for( unsigned int i = 0; i < Campaign()->m_hSession.m_hPlayerData.Count(); i++ )
+	char szCampaignName[128];
+	Q_strncpy( szCampaignName, args[1], sizeof(szCampaignName) );
+
+	uint32 iHost = 0;
+
+	if( !engine->IsDedicatedServer() && steamapicontext )
+		iHost = steamapicontext->SteamUser()->GetSteamID().GetAccountID();
+
+	_active_campaign_name.SetValue( args[1] );
+	_active_campaign_host.SetValue( UTIL_VarArgs( "%u", iHost ) );
+
+	const char *szArgs[] = { szCampaignName };
+	CCommand campaign_args( 1, szArgs );
+	Campaign()->CreateSession( campaign_args, iHost );
+
+	engine->ServerCommand( "exec chapter1.cfg" );
+}
+
+CON_COMMAND( continue_campaign, "" )
+{
+	char szCampaignName[128];
+	Q_strncpy( szCampaignName, args[1], sizeof(szCampaignName) );
+	const char *szArgs[] = { szCampaignName };
+	CCommand campaign_args( 1, szArgs );
+
+	uint32 iHost = 0;
+
+	if( !engine->IsDedicatedServer() && steamapicontext )
+		iHost = steamapicontext->SteamUser()->GetSteamID().GetAccountID();
+
+	_active_campaign_name.SetValue( args[1] );
+	_active_campaign_host.SetValue( UTIL_VarArgs( "%u", iHost ) );
+
+	KeyValues *pData = new KeyValues( "CampaignSession" );
+
+	if( !pData->LoadFromFile( filesystem, UTIL_VarArgs("saves/%s.txt", _active_campaign_name.GetString() ), "MOD" ) )
 	{
-		DevMsg( "%u\n", Campaign()->m_hSession.m_hPlayerData[i].m_iSteamID );
+		pData->deleteThis();
+		return;
+	}
+	
+	Campaign()->LoadSession(pData);
+
+	pData->deleteThis();
+	engine->ServerCommand( "exec chapter1.cfg" );
+}
+#endif
+
+#ifdef GAME_DLL
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+CON_COMMAND( campaign_test_server, "" )
+#else
+CON_COMMAND( campaign_test_client, "" )
+#endif
+{
+	CampaignDevMsg();
+}
+
+void CampaignDevMsg()
+{
+	Msg( "saves/%s.txt\n", Campaign()->m_hSession.m_szName );
+	
+	Msg( "\tName %s\n", Campaign()->m_hSession.m_szName );
+	Msg( "\tHost %u\n", Campaign()->m_hSession.m_iHost );
+	Msg( "\tSeed %d\n", Campaign()->m_hSession.m_iSeed ); 
+
+	Msg( "\tCampaign\n" );
+	Msg( "\t\tStage %d\n", Campaign()->m_hSession.m_hMapHistory.Count() );
+	Msg( "\t\tXP %d\n", Campaign()->m_hSession.m_iXP );
+
+	Msg( "\tPlayers\n" );
+	for( unsigned int i = 0;  i < Campaign()->m_hSession.m_hPlayerData.Count(); i++ )
+	{
+		Msg( "\t\t%d\n", Campaign()->m_hSession.m_hPlayerData[i].m_iSteamID);
+		Msg( "\t\t\tClass %s\n", Campaign()->m_hSession.m_hPlayerData[i].m_szClass );
+		Msg( "\t\t\tSkillSet\n" );
+		for( unsigned int y = 0;  y < Campaign()->m_hSession.m_hPlayerData[i].m_hSkills.Count(); y++ )
+		{
+			Msg( "\t\t\t\t%s %s\n", Campaign()->m_hSession.m_hPlayerData[i].m_hSkills.GetElementName(y), Campaign()->m_hSession.m_hPlayerData[i].m_hSkills[y].Get());
+		}
+	}
+
+	Msg( "\tMapHistory\n" );
+	for( unsigned int i = 0;  i < Campaign()->m_hSession.m_hMapHistory.Count(); i++ )
+	{
+		Msg( "\t\t%d\n", Campaign()->m_hSession.m_hMapHistory[i].m_iOrder );
+		Msg( "\t\t\tName %s\n", Campaign()->m_hSession.m_hMapHistory[i].m_szName );
+		for( unsigned int y = 0;  y < Campaign()->m_hSession.m_hMapHistory[i].m_hMapData.Count(); y++ )
+		{
+			Msg( "\t\t\t%s %s\n", Campaign()->m_hSession.m_hMapHistory[i].m_hMapData.GetElementName(y), Campaign()->m_hSession.m_hMapHistory[i].m_hMapData[y].Get() );
+		}
 	}
 }
 
+#ifdef GAME_DLL
 CON_COMMAND( campaign_end, "" )
 {
 	OFGameRules()->RoundWin();
 }
+
+CON_COMMAND( campaign_transmit, "" )
+{
+	Campaign()->TransmitSessionToClients();
+}
+
+CON_COMMAND( campaign_save_server, "" )
+{
+	Campaign()->SaveSession();
+}
 #else
-CON_COMMAND( client_campaign_test, "" )
+CON_COMMAND( campaign_save_client, "" )
 {
 	Campaign()->SaveSession();
 }

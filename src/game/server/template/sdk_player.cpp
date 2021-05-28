@@ -219,6 +219,9 @@ void CSDKPlayer::InitialSpawn( void )
 	data->SetInt( "cmd", TEXTWINDOW_CMD_IMPULSE101 );// exec this command if panel closed
 	data->SetBool( "unload", sv_motd_unload_on_dismissal.GetBool() );
 	*/
+
+	// Transmit the needed data to clients who just joined
+	Campaign()->TransmitSessionToClients();
 	ShowViewPortPanel( PANEL_LOBBY, true );
 	StartObserverMode( OBS_MODE_ROAMING );
 	ChangeTeam( OF_TEAM_UNASSIGNED );

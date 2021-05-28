@@ -39,7 +39,6 @@ called each time a player is spawned into the game
 void FinishClientPutInServer(CBasePlayer* pPlayer)
 {
 	Campaign()->RegisterPlayer(pPlayer->edict());
-	Campaign()->TransmitSessionToClients();
 }
 
 void ClientFullyConnect(edict_t *pEntity)

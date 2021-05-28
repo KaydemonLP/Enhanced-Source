@@ -17,6 +17,8 @@
 
 // =====Convars=============
 
+ConVar mm_max_players( "mm_max_players", "4", FCVAR_REPLICATED | FCVAR_CHEAT, "Max players for matchmaking system" );
+
 // ===Ammo/Damage===
 
 //Pistol

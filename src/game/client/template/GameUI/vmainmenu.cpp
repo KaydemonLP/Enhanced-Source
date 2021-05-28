@@ -894,9 +894,9 @@ void MainMenu::AcceptNewGameCallback( void *var )
 	{
 		const char *szArgs[] = { szCampaignName };
 		CCommand args( 1, szArgs );
-		Campaign()->CreateSession( args, steamapicontext->SteamUser()->GetSteamID().GetAccountID() );
 		engine->ExecuteClientCmd( VarArgs("_active_campaign_name \"%s\"", args[0]) );
 		engine->ExecuteClientCmd( VarArgs("_active_campaign_host %u", steamapicontext->SteamUser()->GetSteamID().GetAccountID()) );
+		Campaign()->CreateSession( args, steamapicontext->SteamUser()->GetSteamID().GetAccountID() );
 		pMainMenu->OnCommand( "SoloPlay_NoConfirm" );
 	}
 }
@@ -988,5 +988,23 @@ void MainMenu::AcceptVersusSoftLockCallback( void *var )
 	if ( MainMenu *pMainMenu = static_cast< MainMenu* >( CBaseModPanel::GetSingleton().GetWindow( WT_MAINMENU ) ) )
 	{
 		pMainMenu->OnCommand( "FlmVersusFlyout" );
+	}
+}
+
+CON_COMMAND_F(openserverbrowser, "Opens server browser", 0)
+{
+	bool isSteam = IsPC() && steamapicontext->SteamFriends() && steamapicontext->SteamUtils();
+	if (isSteam)
+	{
+		// show the server browser
+		g_VModuleLoader.ActivateModule("Servers");
+
+		// if an argument was passed, that's the tab index to show, send a message to server browser to switch to that tab
+		if (args.ArgC() > 1)
+		{
+			KeyValues *pKV = new KeyValues("ShowServerBrowserPage");
+			pKV->SetInt("page", atoi(args[1]));
+			g_VModuleLoader.PostMessageToAllModules(pKV);
+		}
 	}
 }

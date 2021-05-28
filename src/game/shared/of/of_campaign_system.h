@@ -158,7 +158,7 @@ public:
 	virtual void ClearSession( void );
 	virtual bool CreateSession( CCommand args, uint64 iSteamID );
 	virtual bool LoadSession( KeyValues *kvSessionData );
-	virtual bool SaveSession( void );
+	virtual bool SaveSession( bool bHost = false );
 
 	session_map_history_t *GetSessionMapData( uint32 iOrder );
 	session_player_data_t *GetSessionPlayerData( uint32 iSteamID );

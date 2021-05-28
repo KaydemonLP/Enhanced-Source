@@ -27,6 +27,22 @@ private:
 	EHANDLE				m_pPlayer;
 };
 
+class COFLobbyClassChoice : public vgui::EditablePanel
+{
+public:
+	DECLARE_CLASS_SIMPLE( COFLobbyClassChoice, vgui::EditablePanel );
+
+	COFLobbyClassChoice( vgui::Panel *parent, const char *name );
+	void ApplySchemeSettings( vgui::IScheme *pScheme );
+
+	MESSAGE_FUNC_PTR( OnRadioButtonChecked, "RadioButtonChecked", panel );
+	virtual void OnCommand( const char *command );
+public:
+	CUtlVector<vgui::RadioButton*>	m_pClasses;
+
+	int m_iChosenClass;
+};
+
 class COFLobbyMapChoice : public vgui::EditablePanel
 {
 public:
@@ -90,6 +106,8 @@ protected:
 	// vgui overrides
 	IViewPort		*m_pViewPort;
 	COFLobbyPlayerStatus *m_pPlayerStatus;
+	// If Floppa Had a choice
+	COFLobbyClassChoice	*m_pClassChoice;
 	// If Scrungo Had a choice
 	COFLobbyMapChoice	*m_pMapChoice;
 };
